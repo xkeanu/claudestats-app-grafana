@@ -10,7 +10,8 @@
     "lint": "eslint ./src",
     "lint:fix": "eslint ./src --fix",
     "server": "docker compose up --build",
-    "test": "jest --passWithNoTests",
+    "test": "jest --watch --onlyChanged",
+    "test:ci": "jest --passWithNoTests --maxWorkers 4",
     "typecheck": "tsc --noEmit"
   },
   "author": "Timur Digital",
