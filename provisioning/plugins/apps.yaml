@@ -1,0 +1,13 @@
+apiVersion: 1
+
+apps:
+  - type: timurdigital-claudestats-app
+    org_id: 1
+    disabled: false
+    jsonData:
+      # Team member UUID to display name mappings
+      # Format: UUID|Display Name (one per line, # for comments)
+      teamMembers: |
+        4eaee657-287f-47b5-80fd-21e5fff39b75|Timur Olzhabayev
+        # abc-123-def-456|John Smith
+        # ghi-789-jkl-012|Jane Doe

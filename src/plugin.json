@@ -1,0 +1,44 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "app",
+  "name": "Claude Stats",
+  "id": "timurdigital-claudestats-app",
+  "info": {
+    "keywords": ["claude", "anthropic", "usage", "analytics", "opentelemetry", "team"],
+    "description": "Team usage analytics for Claude Code powered by OpenTelemetry",
+    "author": {
+      "name": "Timur Digital"
+    },
+    "logos": {
+      "small": "img/logo.svg",
+      "large": "img/logo.svg"
+    },
+    "links": [
+      {
+        "name": "GitHub",
+        "url": "https://github.com/timurdigital/claudestats-app"
+      },
+      {
+        "name": "Documentation",
+        "url": "https://github.com/timurdigital/claudestats-app#readme"
+      }
+    ],
+    "screenshots": [],
+    "version": "1.0.0",
+    "updated": "2025-01-05"
+  },
+  "includes": [
+    {
+      "type": "page",
+      "name": "Overview",
+      "path": "/a/timurdigital-claudestats-app",
+      "role": "Viewer",
+      "addToNav": true,
+      "defaultNav": true
+    }
+  ],
+  "dependencies": {
+    "grafanaDependency": ">=12.3.0",
+    "plugins": []
+  }
+}
