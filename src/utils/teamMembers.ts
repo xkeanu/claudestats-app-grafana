@@ -1,6 +1,6 @@
 import { getBackendSrv, getDataSourceSrv } from '@grafana/runtime';
 import { SceneDataTransformer, SceneQueryRunner } from '@grafana/scenes';
-import { MappingType, ValueMapping } from '@grafana/schema';
+import { MappingType, ValueMapping } from '@grafana/data';
 import { PLUGIN_ID, METRICS, LABELS } from '../constants';
 import { ClaudeStatsSettings, parseTeamMembers } from '../types';
 
