@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
   "type": "app",
-  "name": "Claude Stats",
+  "name": "Claude Code Stats",
   "id": "timurdigital-claudestats-app",
   "info": {
     "keywords": ["claude", "anthropic", "usage", "analytics", "opentelemetry", "team"],

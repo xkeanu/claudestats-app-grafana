@@ -143,7 +143,7 @@ export OTEL_METRIC_EXPORT_INTERVAL=60000
         ) : (
           <>
             <Alert title="Plugin is enabled" severity="success">
-              Claude Stats is active. Visit the <a href="/a/timurdigital-claudestats-app">Overview page</a> to see your team&apos;s usage.
+              Claude Code Stats is active. Visit the <a href="/a/timurdigital-claudestats-app">Overview page</a> to see your team&apos;s usage.
             </Alert>
             <div className={styles.buttonRow}>
               <Button variant="destructive" onClick={onDisable}>
@@ -342,14 +342,14 @@ ghi-789-jkl-012|Jane Doe`}
                         />
                       </li>
                       <li>
-                        <strong>Check Claude Code is using telemetry:</strong>
-                        <p>Look for OTEL-related messages when starting Claude Code</p>
+                        <strong>Use Claude Code for a few minutes:</strong>
+                        <p>Metrics are exported periodically (default: every 60 seconds). Have a conversation, edit some code, then wait 1-2 minutes.</p>
                       </li>
                       <li>
-                        <strong>Verify OTLP endpoint is reachable:</strong>
+                        <strong>Query metrics directly in Grafana Explore:</strong>
                         <CodeEditor
-                          value="curl -v $OTEL_EXPORTER_OTLP_ENDPOINT/v1/metrics"
-                          language="shell"
+                          value="claude_code_cost_usage_USD_total"
+                          language="promql"
                           height={40}
                           readOnly
                           showMiniMap={false}

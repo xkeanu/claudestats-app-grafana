@@ -27,7 +27,7 @@ function getSceneApp(teamMembers: Record<string, string>, discoveredUuids: strin
   return new SceneApp({
     pages: [
       new SceneAppPage({
-        title: 'Claude Stats',
+        title: 'Claude Code Stats',
         subTitle: 'Team usage analytics for Claude Code',
         url: PLUGIN_BASE_URL,
         // Use wildcard to match all sub-routes
@@ -101,7 +101,7 @@ export function ClaudeStatsApp() {
   }, []);
 
   if (isLoading || teamMembers === null || discoveredUuids === null) {
-    return <LoadingPlaceholder text="Loading Claude Stats..." />;
+    return <LoadingPlaceholder text="Loading Claude Code Stats..." />;
   }
 
   return <SceneAppRenderer teamMembers={teamMembers} discoveredUuids={discoveredUuids} />;
