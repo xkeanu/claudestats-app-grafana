@@ -13,16 +13,16 @@ import { getCostsScene } from '../../scenes/pages/CostsScene';
 import { getTokensScene } from '../../scenes/pages/TokensScene';
 import { getToolsScene } from '../../scenes/pages/ToolsScene';
 import { getProductivityScene } from '../../scenes/pages/ProductivityScene';
-import { loadTeamMembers } from '../../utils/teamMembers';
+import { loadTeamMembers, discoverTeamMemberUuids } from '../../utils/teamMembers';
 
 // Helper to prefix route with plugin base URL
 function prefixRoute(route: string): string {
   return `${PLUGIN_BASE_URL}/${route}`;
 }
 
-function getSceneApp(teamMembers: Record<string, string>) {
+function getSceneApp(teamMembers: Record<string, string>, discoveredUuids: string[]) {
   const timeRange = new SceneTimeRange({ from: 'now-7d', to: 'now' });
-  const variables = getSharedVariables();
+  const variables = getSharedVariables(teamMembers, discoveredUuids);
 
   return new SceneApp({
     pages: [
@@ -76,24 +76,33 @@ function getSceneApp(teamMembers: Record<string, string>) {
   });
 }
 
-function SceneAppRenderer({ teamMembers }: { teamMembers: Record<string, string> }) {
-  const scene = useSceneApp(() => getSceneApp(teamMembers));
+interface SceneAppRendererProps {
+  teamMembers: Record<string, string>;
+  discoveredUuids: string[];
+}
+
+function SceneAppRenderer({ teamMembers, discoveredUuids }: SceneAppRendererProps) {
+  const scene = useSceneApp(() => getSceneApp(teamMembers, discoveredUuids));
   return <scene.Component model={scene} />;
 }
 
 export function ClaudeStatsApp() {
   const [teamMembers, setTeamMembers] = useState<Record<string, string> | null>(null);
+  const [discoveredUuids, setDiscoveredUuids] = useState<string[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadTeamMembers()
-      .then(setTeamMembers)
+    Promise.all([loadTeamMembers(), discoverTeamMemberUuids()])
+      .then(([members, uuids]) => {
+        setTeamMembers(members);
+        setDiscoveredUuids(uuids);
+      })
       .finally(() => setIsLoading(false));
   }, []);
 
-  if (isLoading || teamMembers === null) {
+  if (isLoading || teamMembers === null || discoveredUuids === null) {
     return <LoadingPlaceholder text="Loading Claude Stats..." />;
   }
 
-  return <SceneAppRenderer teamMembers={teamMembers} />;
+  return <SceneAppRenderer teamMembers={teamMembers} discoveredUuids={discoveredUuids} />;
 }

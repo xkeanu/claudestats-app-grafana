@@ -1,6 +1,6 @@
-import { getBackendSrv } from '@grafana/runtime';
+import { getBackendSrv, getDataSourceSrv } from '@grafana/runtime';
 import { SceneDataTransformer, SceneQueryRunner } from '@grafana/scenes';
-import { PLUGIN_ID } from '../constants';
+import { PLUGIN_ID, METRICS, LABELS } from '../constants';
 import { ClaudeStatsSettings, parseTeamMembers } from '../types';
 
 let cachedTeamMembers: Record<string, string> | null = null;
@@ -34,6 +34,50 @@ export function clearTeamMembersCache(): void {
 }
 
 /**
+ * Discover unique user_account_uuid values from Prometheus
+ */
+export async function discoverTeamMemberUuids(): Promise<string[]> {
+  try {
+    // Get the first Prometheus data source
+    const dsList = await getDataSourceSrv().getList({ type: 'prometheus' });
+    if (dsList.length === 0) {
+      return [];
+    }
+
+    const dsUid = dsList[0].uid;
+
+    // Query for unique user_account_uuid values
+    const response = await getBackendSrv().post(`/api/ds/query`, {
+      queries: [
+        {
+          refId: 'A',
+          datasource: { type: 'prometheus', uid: dsUid },
+          expr: `group by (${LABELS.USER_ACCOUNT_UUID}) (${METRICS.COST_USAGE})`,
+          instant: true,
+        },
+      ],
+      from: 'now-30d',
+      to: 'now',
+    });
+
+    // Extract unique UUIDs from the response
+    const uuids: string[] = [];
+    const frames = response?.results?.A?.frames || [];
+    for (const frame of frames) {
+      const labels = frame?.schema?.fields?.[1]?.labels;
+      if (labels?.user_account_uuid) {
+        uuids.push(labels.user_account_uuid);
+      }
+    }
+
+    return uuids;
+  } catch (e) {
+    console.error('Error discovering team member UUIDs:', e);
+    return [];
+  }
+}
+
+/**
  * Get team member display name from UUID
  * Returns the UUID if no mapping is found
  */
@@ -63,6 +107,21 @@ export function createTeamMemberRenameTransformations(mappings: Record<string, s
  */
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Create value mappings for table panels
+ * Maps UUID values to display names
+ */
+export function createTeamMemberValueMappings(mappings: Record<string, string>): Array<{
+  type: 'value';
+  options: Record<string, { text: string }>;
+}> {
+  const options: Record<string, { text: string }> = {};
+  for (const [uuid, name] of Object.entries(mappings)) {
+    options[uuid] = { text: name };
+  }
+  return [{ type: 'value', options }];
 }
 
 /**

@@ -18,6 +18,7 @@ import {
   StackingMode,
   GraphDrawStyle,
   BarGaugeDisplayMode,
+  BarGaugeValueMode,
   VizOrientation,
 } from '@grafana/schema';
 import { QUERIES } from '../queries';
@@ -248,15 +249,20 @@ export function getProductivityScene(
         // Row 4: Active time by member
         new SceneFlexLayout({
           direction: 'row',
-          height: PANEL_HEIGHTS.MEDIUM,
+          height: PANEL_HEIGHTS.LARGE,
           children: [
             new SceneFlexItem({
               body: PanelBuilders.bargauge()
                 .setTitle('Active Time by Team Member')
                 .setUnit('s')
                 .setData(activeTimeByMemberQuery)
-                .setOption('displayMode', BarGaugeDisplayMode.Gradient)
                 .setOption('orientation', VizOrientation.Horizontal)
+                .setOption('displayMode', BarGaugeDisplayMode.Gradient)
+                .setOption('valueMode', BarGaugeValueMode.Text)
+                .setOption('showUnfilled', true)
+                .setOption('minVizWidth', 200)
+                .setOption('minVizHeight', 50)
+                .setDisplayName('${__series.name}')
                 .build(),
             }),
           ],

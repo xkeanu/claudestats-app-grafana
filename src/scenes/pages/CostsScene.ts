@@ -15,7 +15,7 @@ import {
 import { BigValueGraphMode, LegendDisplayMode, StackingMode } from '@grafana/schema';
 import { QUERIES } from '../queries';
 import { PANEL_HEIGHTS, LABELS, METRICS } from '../../constants';
-import { createTeamMemberRenameTransformations } from '../../utils/teamMembers';
+import { createTeamMemberRenameTransformations, createTeamMemberValueMappings } from '../../utils/teamMembers';
 
 export function getCostsScene(
   timeRange: SceneTimeRange,
@@ -23,6 +23,7 @@ export function getCostsScene(
   teamMembers: Record<string, string>
 ): EmbeddedScene {
   const teamMemberTransforms = createTeamMemberRenameTransformations(teamMembers);
+  const teamMemberValueMappings = createTeamMemberValueMappings(teamMembers);
 
   const totalCostQuery = new SceneQueryRunner({
     datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
@@ -195,6 +196,9 @@ export function getCostsScene(
                 .setTitle('Cost Breakdown')
                 .setData(costTableQuery)
                 .setOption('sortBy', [{ displayName: 'Value', desc: true }])
+                .setOverrides((b) =>
+                  b.matchFieldsWithName('user_account_uuid').overrideDisplayName('Team Member').overrideMappings(teamMemberValueMappings)
+                )
                 .build(),
             }),
           ],

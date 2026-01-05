@@ -16,8 +16,6 @@ import {
   BigValueGraphMode,
   LegendDisplayMode,
   StackingMode,
-  BarGaugeDisplayMode,
-  VizOrientation,
 } from '@grafana/schema';
 import { QUERIES } from '../queries';
 import { PANEL_HEIGHTS, LABELS, METRICS } from '../../constants';
@@ -224,12 +222,11 @@ export function getTokensScene(
             }),
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.bargauge()
+              body: PanelBuilders.piechart()
                 .setTitle('Tokens by Team Member')
                 .setUnit('short')
                 .setData(tokensByMemberQuery)
-                .setOption('displayMode', BarGaugeDisplayMode.Gradient)
-                .setOption('orientation', VizOrientation.Horizontal)
+                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
                 .build(),
             }),
           ],

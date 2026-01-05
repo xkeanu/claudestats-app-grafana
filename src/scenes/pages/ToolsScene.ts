@@ -16,6 +16,7 @@ import {
   LegendDisplayMode,
   StackingMode,
   BarGaugeDisplayMode,
+  BarGaugeValueMode,
   VizOrientation,
 } from '@grafana/schema';
 import { QUERIES } from '../queries';
@@ -138,6 +139,11 @@ export function getToolsScene(
                 .setData(toolDecisionsByToolQuery)
                 .setOption('displayMode', BarGaugeDisplayMode.Gradient)
                 .setOption('orientation', VizOrientation.Horizontal)
+                .setOption('valueMode', BarGaugeValueMode.Text)
+                .setOption('showUnfilled', true)
+                .setOption('minVizWidth', 150)
+                .setOption('minVizHeight', 25)
+                .setDisplayName('${__series.name}')
                 .build(),
             }),
           ],
