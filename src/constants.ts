@@ -33,6 +33,12 @@ export const LABELS = {
   SESSION_ID: 'session_id',
   TOOL: 'tool_name',
   DECISION: 'decision',
+  // Environment labels
+  OS_TYPE: 'os_type',
+  OS_VERSION: 'os_version',
+  HOST_ARCH: 'host_arch',
+  SERVICE_VERSION: 'service_version',
+  TERMINAL_TYPE: 'terminal_type',
 } as const;
 
 // Default time ranges

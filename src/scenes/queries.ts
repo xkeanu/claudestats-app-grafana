@@ -104,4 +104,18 @@ export const QUERIES = {
   /** Tool acceptance rate */
   toolAcceptanceRate: `sum(${METRICS.TOOL_DECISION}{${LABELS.USER_ACCOUNT_UUID}=~"$member", ${LABELS.DECISION}="accept"}) / sum(${METRICS.TOOL_DECISION}{${LABELS.USER_ACCOUNT_UUID}=~"$member"}) * 100`,
 
+  // ==================== ENVIRONMENT QUERIES ====================
+
+  /** Usage by OS type (darwin, linux, windows) */
+  usageByOsType: `sum by (${LABELS.OS_TYPE}) (${METRICS.COST_USAGE}{${LABELS.USER_ACCOUNT_UUID}=~"$member"})`,
+
+  /** Usage by host architecture (arm64, x64) */
+  usageByHostArch: `sum by (${LABELS.HOST_ARCH}) (${METRICS.COST_USAGE}{${LABELS.USER_ACCOUNT_UUID}=~"$member"})`,
+
+  /** Usage by terminal type */
+  usageByTerminalType: `sum by (${LABELS.TERMINAL_TYPE}) (${METRICS.COST_USAGE}{${LABELS.USER_ACCOUNT_UUID}=~"$member"})`,
+
+  /** Usage by service version */
+  usageByServiceVersion: `sum by (${LABELS.SERVICE_VERSION}) (${METRICS.COST_USAGE}{${LABELS.USER_ACCOUNT_UUID}=~"$member"})`,
+
 } as const;
