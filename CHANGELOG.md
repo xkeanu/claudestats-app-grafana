@@ -13,4 +13,4 @@ Initial release of Claude Stats Grafana app plugin.
 - Productivity metrics (lines of code, commits, PRs)
 - Setup wizard for configuring Claude Code OpenTelemetry export
 - Team member filtering across all dashboards
-- Auto-discovery of Prometheus and Loki data sources
+- Auto-discovery of Prometheus data sources
