@@ -38,6 +38,9 @@ export OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
 export OTEL_EXPORTER_OTLP_ENDPOINT="https://otlp-gateway-prod-<region>.grafana.net/otlp"
 export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Basic <your-base64-encoded-token>"
 
+# IMPORTANT: Use cumulative temporality for Grafana Cloud compatibility
+export OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=cumulative
+
 # Optional: Adjust export interval (in milliseconds, default: 60000)
 export OTEL_METRIC_EXPORT_INTERVAL=60000
 ```
