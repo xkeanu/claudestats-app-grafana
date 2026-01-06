@@ -15,12 +15,16 @@
     },
     "links": [
       {
-        "name": "GitHub",
-        "url": "https://github.com/timurdigital/claudestats-app"
+        "name": "repository",
+        "url": "https://github.com/tolzhabayev/claudestats-app-grafana"
       },
       {
-        "name": "Documentation",
-        "url": "https://github.com/timurdigital/claudestats-app#readme"
+        "name": "documentation",
+        "url": "https://github.com/tolzhabayev/claudestats-app-grafana/blob/HEAD/src/README.md"
+      },
+      {
+        "name": "license",
+        "url": "https://github.com/tolzhabayev/claudestats-app-grafana/blob/HEAD/LICENSE"
       }
     ],
     "screenshots": [
