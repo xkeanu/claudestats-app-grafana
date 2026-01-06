@@ -66,13 +66,9 @@ claude
 - **Productivity**: Lines of code, commits, and active time
 - **Environment**: OS, architecture, and Claude Code version distribution
 
-## Team Member Names
+## Team Members
 
-By default, team members are identified by their UUID. To display names instead:
-
-1. Go to **Administration > Plugins > Claude Code Stats > Configuration**
-2. Select the **Team Members** tab
-3. Add mappings in the format: `UUID|Display Name`
+Team members are automatically identified by their email address from the `user_email` label in the metrics.
 
 ## Documentation
 
