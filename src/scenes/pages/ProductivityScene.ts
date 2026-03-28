@@ -121,16 +121,6 @@ export function getProductivityScene(
     ],
   });
 
-  const linesOfCodeByLanguageQuery = new SceneQueryRunner({
-    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
-    queries: [
-      {
-        refId: 'LinesOfCodeByLanguage',
-        expr: QUERIES.linesOfCodeByLanguage,
-        legendFormat: '{{language}}',
-      },
-    ],
-  });
 
   return new EmbeddedScene({
     $timeRange: timeRange,
@@ -170,6 +160,7 @@ export function getProductivityScene(
             new SceneFlexItem({
               body: PanelBuilders.stat()
                 .setTitle('Pull Requests')
+                .setDescription('Only counts PRs created by Claude Code itself (gh pr create, glab mr create). Manual PRs are not tracked.')
                 .setUnit('short')
                 .setData(totalPullRequestsQuery)
                 .setOption('graphMode', BigValueGraphMode.Area)
@@ -193,7 +184,7 @@ export function getProductivityScene(
           height: PANEL_HEIGHTS.LARGE,
           children: [
             new SceneFlexItem({
-              width: '25%',
+              width: '35%',
               body: PanelBuilders.piechart()
                 .setTitle('Lines Added vs Removed')
                 .setUnit('short')
@@ -203,7 +194,7 @@ export function getProductivityScene(
                 .build(),
             }),
             new SceneFlexItem({
-              width: '45%',
+              width: '65%',
               body: PanelBuilders.timeseries()
                 .setTitle('Lines of Code Over Time')
                 .setUnit('short')
@@ -212,15 +203,6 @@ export function getProductivityScene(
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 30)
                 .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
-                .build(),
-            }),
-            new SceneFlexItem({
-              width: '30%',
-              body: PanelBuilders.piechart()
-                .setTitle('Top Languages by LOC')
-                .setUnit('short')
-                .setData(linesOfCodeByLanguageQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .build(),
             }),
           ],
@@ -244,6 +226,7 @@ export function getProductivityScene(
               width: '50%',
               body: PanelBuilders.timeseries()
                 .setTitle('Pull Requests Over Time')
+                .setDescription('Only counts PRs created by Claude Code itself (gh pr create, glab mr create). Manual PRs are not tracked.')
                 .setUnit('short')
                 .setData(pullRequestsOverTimeQuery)
                 .setCustomFieldConfig('fillOpacity', 30)

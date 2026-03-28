@@ -81,39 +81,6 @@ export function getLanguagesScene(
     ],
   });
 
-  const linesOfCodeByLanguageQuery = new SceneQueryRunner({
-    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
-    queries: [
-      {
-        refId: 'LinesOfCodeByLanguage',
-        expr: QUERIES.linesOfCodeByLanguage,
-        legendFormat: '{{language}}',
-      },
-    ],
-  });
-
-  const linesOfCodeByLanguageAndTypeQuery = new SceneQueryRunner({
-    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
-    queries: [
-      {
-        refId: 'LinesOfCodeByLanguageAndType',
-        expr: QUERIES.linesOfCodeByLanguageAndType,
-        legendFormat: '{{language}} - {{type}}',
-      },
-    ],
-  });
-
-  const linesOfCodeByLanguageOverTimeQuery = new SceneQueryRunner({
-    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
-    queries: [
-      {
-        refId: 'LinesOfCodeByLanguageOverTime',
-        expr: QUERIES.linesOfCodeByLanguageOverTime,
-        legendFormat: '{{language}}',
-      },
-    ],
-  });
-
   return new EmbeddedScene({
     $timeRange: timeRange,
     $variables: variables,
@@ -182,57 +149,7 @@ export function getLanguagesScene(
             }),
           ],
         }),
-        // Row 3: Lines of code by language
-        new SceneFlexLayout({
-          direction: 'row',
-          height: PANEL_HEIGHTS.LARGE,
-          children: [
-            new SceneFlexItem({
-              width: '40%',
-              body: PanelBuilders.piechart()
-                .setTitle('Lines of Code by Language')
-                .setUnit('short')
-                .setData(linesOfCodeByLanguageQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
-                .setOption('pieType', 'donut' as never)
-                .build(),
-            }),
-            new SceneFlexItem({
-              width: '60%',
-              body: PanelBuilders.bargauge()
-                .setTitle('Lines Added vs Removed by Language')
-                .setUnit('short')
-                .setData(linesOfCodeByLanguageAndTypeQuery)
-                .setOption('displayMode', BarGaugeDisplayMode.Gradient)
-                .setOption('orientation', VizOrientation.Horizontal)
-                .setOption('valueMode', BarGaugeValueMode.Text)
-                .setOption('showUnfilled', true)
-                .setOption('minVizWidth', 150)
-                .setOption('minVizHeight', 25)
-                .setDisplayName('${__series.name}')
-                .build(),
-            }),
-          ],
-        }),
-        // Row 4: LOC by language over time
-        new SceneFlexLayout({
-          direction: 'row',
-          height: PANEL_HEIGHTS.LARGE,
-          children: [
-            new SceneFlexItem({
-              body: PanelBuilders.timeseries()
-                .setTitle('Lines of Code by Language Over Time')
-                .setUnit('short')
-                .setData(linesOfCodeByLanguageOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
-                .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
-                .setCustomFieldConfig('fillOpacity', 30)
-                .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
-                .build(),
-            }),
-          ],
-        }),
-        // Row 5: Language by member table
+        // Row 3: Language by member table
         new SceneFlexLayout({
           direction: 'row',
           height: PANEL_HEIGHTS.TABLE,
