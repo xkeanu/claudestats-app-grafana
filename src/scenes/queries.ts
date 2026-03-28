@@ -48,10 +48,10 @@ export const QUERIES = {
   // ==================== SESSION QUERIES ====================
 
   /** Total sessions - count unique session_id labels */
-  totalSessions: `count(count by (${LABELS.SESSION_ID}) (increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) > 0))`,
+  totalSessions: `sum(increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
 
   /** Sessions by device */
-  sessionsByDevice: `count by (${LABELS.DEVICE}) (count by (${LABELS.SESSION_ID}, ${LABELS.DEVICE}) (increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) > 0))`,
+  sessionsByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
 
   /** Active users - count unique user_email labels */
   activeUsers: `count(count by (${LABELS.USER_EMAIL}) (increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) > 0))`,
@@ -149,17 +149,6 @@ export const QUERIES = {
 
   /** Total unique languages */
   totalLanguages: `count(count by (${LABELS.LANGUAGE}) (increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__range]) > 0))`,
-
-  // ==================== LANGUAGE LOC QUERIES ====================
-
-  /** Lines of code by language (total) */
-  linesOfCodeByLanguage: `sum by (${LABELS.LANGUAGE}) (increase(${METRICS.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__range]))`,
-
-  /** Lines of code by language and type (added/removed) */
-  linesOfCodeByLanguageAndType: `sum by (${LABELS.LANGUAGE}, ${LABELS.LOC_TYPE}) (increase(${METRICS.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__range]))`,
-
-  /** Lines of code by language over time */
-  linesOfCodeByLanguageOverTime: `sum by (${LABELS.LANGUAGE}) (increase(${METRICS.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__rate_interval]))`,
 
   // ==================== ENHANCED TOOL QUERIES ====================
 
