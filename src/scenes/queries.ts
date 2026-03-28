@@ -99,6 +99,29 @@ export const QUERIES = {
   /** Active time over time */
   activeTimeOverTime: `sum(increase(${METRICS.ACTIVE_TIME}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]))`,
 
+  // ==================== SESSION ANALYTICS QUERIES ====================
+
+  /** Average tokens per session */
+  avgTokensPerSession: `sum(increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range])) / sum(increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
+
+  /** Average active time per session */
+  avgActiveTimePerSession: `sum(increase(${METRICS.ACTIVE_TIME}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])) / sum(increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
+
+  /** Average cost per session */
+  avgCostPerSession: `sum(increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range])) / sum(increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
+
+  /** Sessions over time by device */
+  sessionsOverTime: `sum by (${LABELS.DEVICE}) (increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]))`,
+
+  /** Session intensity (avg tokens per session) over time */
+  sessionIntensityOverTime: `sum(increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__rate_interval])) / sum(increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]))`,
+
+  /** Sessions by model */
+  sessionsByModel: `sum by (${LABELS.MODEL}) (increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range]))`,
+
+  /** Active users over time */
+  activeUsersOverTime: `count(count by (${LABELS.USER_EMAIL}) (increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]) > 0))`,
+
   // ==================== TOOL QUERIES ====================
 
   /** Tool decisions (accepted, rejected) */
@@ -127,6 +150,17 @@ export const QUERIES = {
   /** Total unique languages */
   totalLanguages: `count(count by (${LABELS.LANGUAGE}) (increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__range]) > 0))`,
 
+  // ==================== LANGUAGE LOC QUERIES ====================
+
+  /** Lines of code by language (total) */
+  linesOfCodeByLanguage: `sum by (${LABELS.LANGUAGE}) (increase(${METRICS.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__range]))`,
+
+  /** Lines of code by language and type (added/removed) */
+  linesOfCodeByLanguageAndType: `sum by (${LABELS.LANGUAGE}, ${LABELS.LOC_TYPE}) (increase(${METRICS.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__range]))`,
+
+  /** Lines of code by language over time */
+  linesOfCodeByLanguageOverTime: `sum by (${LABELS.LANGUAGE}) (increase(${METRICS.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__rate_interval]))`,
+
   // ==================== ENHANCED TOOL QUERIES ====================
 
   /** Tool decisions by source (how the decision was made) */
@@ -137,6 +171,9 @@ export const QUERIES = {
 
   /** Tool decisions by language (for Tools scene) */
   toolDecisionsByToolAndLanguage: `sum by (${LABELS.TOOL}, ${LABELS.LANGUAGE}) (increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__range]))`,
+
+  /** Tool decisions by tool and source (how each tool's decisions were made) */
+  toolDecisionsByToolAndSource: `sum by (${LABELS.TOOL}, ${LABELS.DECISION_SOURCE}) (increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
 
   // ==================== ACTIVE TIME BREAKDOWN ====================
 
