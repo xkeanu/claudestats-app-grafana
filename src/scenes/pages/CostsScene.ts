@@ -100,9 +100,10 @@ export function getCostsScene(
         // Row 1: Stats
         new SceneFlexLayout({
           direction: 'row',
-          height: PANEL_HEIGHTS.STAT,
+          height: PANEL_HEIGHTS.MEDIUM,
           children: [
             new SceneFlexItem({
+              width: '30%',
               body: PanelBuilders.stat()
                 .setTitle('Total Cost')
                 .setUnit('currencyUSD')
@@ -112,11 +113,13 @@ export function getCostsScene(
                 .build(),
             }),
             new SceneFlexItem({
+              width: '70%',
               body: PanelBuilders.piechart()
                 .setTitle('Cost by Model')
                 .setUnit('currencyUSD')
                 .setData(costByModelQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
+                .setOption('pieType', 'donut' as never)
                 .build(),
             }),
           ],
