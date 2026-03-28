@@ -11,7 +11,7 @@ import {
   SceneTimePicker,
   SceneRefreshPicker,
 } from '@grafana/scenes';
-import { BigValueGraphMode, LegendDisplayMode, StackingMode } from '@grafana/schema';
+import { BigValueGraphMode, LegendDisplayMode, LineInterpolation, StackingMode } from '@grafana/schema';
 import { QUERIES } from '../queries';
 import { PANEL_HEIGHTS } from '../../constants';
 
@@ -168,6 +168,7 @@ export function getOverviewScene(
                 .setUnit('currencyUSD')
                 .setData(costOverTimeQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+                .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
             new SceneFlexItem({
@@ -194,6 +195,7 @@ export function getOverviewScene(
                 .setData(tokensOverTimeQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
+                .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
             new SceneFlexItem({
@@ -205,6 +207,7 @@ export function getOverviewScene(
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 20)
+                .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
           ],

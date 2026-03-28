@@ -11,7 +11,7 @@ import {
   SceneTimePicker,
   SceneRefreshPicker,
 } from '@grafana/scenes';
-import { BigValueGraphMode, LegendDisplayMode, StackingMode } from '@grafana/schema';
+import { BigValueGraphMode, LegendDisplayMode, LineInterpolation, StackingMode } from '@grafana/schema';
 import { QUERIES } from '../queries';
 import { PANEL_HEIGHTS } from '../../constants';
 
@@ -135,6 +135,7 @@ export function getCostsScene(
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 30)
+                .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
             new SceneFlexItem({
@@ -146,6 +147,7 @@ export function getCostsScene(
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 30)
+                .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
           ],

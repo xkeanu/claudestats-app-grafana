@@ -14,6 +14,7 @@ import {
 import {
   BigValueGraphMode,
   LegendDisplayMode,
+  LineInterpolation,
   StackingMode,
 } from '@grafana/schema';
 import { QUERIES, ENV_FILTERS } from '../queries';
@@ -185,6 +186,7 @@ export function getTokensScene(
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 30)
+                .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
           ],

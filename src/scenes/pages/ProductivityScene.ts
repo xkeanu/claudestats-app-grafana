@@ -14,6 +14,7 @@ import {
 import {
   BigValueGraphMode,
   LegendDisplayMode,
+  LineInterpolation,
   StackingMode,
   GraphDrawStyle,
   BarGaugeDisplayMode,
@@ -199,6 +200,7 @@ export function getProductivityScene(
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 30)
+                .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
           ],

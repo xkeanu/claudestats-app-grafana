@@ -14,6 +14,7 @@ import {
 import {
   BigValueGraphMode,
   LegendDisplayMode,
+  LineInterpolation,
   StackingMode,
   BarGaugeDisplayMode,
   BarGaugeValueMode,
@@ -158,6 +159,7 @@ export function getToolsScene(
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 30)
+                .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
             new SceneFlexItem({
@@ -199,6 +201,7 @@ export function getToolsScene(
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 30)
+                .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
           ],
