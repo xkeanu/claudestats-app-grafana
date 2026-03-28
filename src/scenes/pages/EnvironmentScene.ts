@@ -119,7 +119,7 @@ export function getEnvironmentScene(
     queries: [
       {
         refId: 'CostByDevice',
-        expr: QUERIES.costByDevice,
+        expr: QUERIES.costByDeviceEnv,
         legendFormat: '{{device}}',
         instant: true,
       },

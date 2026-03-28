@@ -72,13 +72,13 @@ export function getLanguagesScene(
     ],
   });
 
-  const toolDecisionsByLanguageAndMemberQuery = new SceneQueryRunner({
+  const toolDecisionsByLanguageAndDeviceQuery = new SceneQueryRunner({
     datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
     queries: [
       {
-        refId: 'ToolDecisionsByLanguageAndMember',
-        expr: QUERIES.toolDecisionsByLanguageAndMember,
-        legendFormat: '{{language}} - {{user_email}}',
+        refId: 'ToolDecisionsByLanguageAndDevice',
+        expr: QUERIES.toolDecisionsByLanguageAndDevice,
+        legendFormat: '{{language}} - {{device}}',
         instant: true,
       },
     ],
@@ -158,12 +158,12 @@ export function getLanguagesScene(
           children: [
             new SceneFlexItem({
               body: PanelBuilders.table()
-                .setTitle('Language Usage by Team Member')
-                .setData(toolDecisionsByLanguageAndMemberQuery)
+                .setTitle('Language Usage by Device')
+                .setData(toolDecisionsByLanguageAndDeviceQuery)
                 .setOverrides((b) =>
                   b
-                    .matchFieldsWithName('user_email')
-                    .overrideDisplayName('Team Member')
+                    .matchFieldsWithName('device')
+                    .overrideDisplayName('Device')
                 )
                 .build(),
             }),

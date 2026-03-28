@@ -13,7 +13,7 @@ import {
 } from '@grafana/scenes';
 import { BigValueGraphMode, LegendDisplayMode, StackingMode } from '@grafana/schema';
 import { QUERIES } from '../queries';
-import { PANEL_HEIGHTS, LABELS, METRICS } from '../../constants';
+import { PANEL_HEIGHTS } from '../../constants';
 
 export function getCostsScene(
   timeRange: SceneTimeRange,
@@ -53,36 +53,36 @@ export function getCostsScene(
     ],
   });
 
-  const costOverTimeByMemberQuery = new SceneQueryRunner({
+  const costOverTimeByDeviceQuery = new SceneQueryRunner({
     datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
     queries: [
       {
-        refId: 'CostOverTimeByMember',
-        expr: QUERIES.costOverTimeByMember,
-        legendFormat: '{{user_email}}',
+        refId: 'CostOverTimeByDevice',
+        expr: QUERIES.costOverTimeByDevice,
+        legendFormat: '{{device}}',
       },
     ],
   });
 
-  const costByMemberQuery = new SceneQueryRunner({
+  const costByDeviceQuery = new SceneQueryRunner({
     datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
     queries: [
       {
-        refId: 'CostByMember',
-        expr: QUERIES.costByMember,
-        legendFormat: '{{user_email}}',
+        refId: 'CostByDevice',
+        expr: QUERIES.costByDevice,
+        legendFormat: '{{device}}',
         instant: true,
       },
     ],
   });
 
-  // Table query for detailed breakdown
+  // Table query for detailed breakdown by device
   const costTableQuery = new SceneQueryRunner({
     datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
     queries: [
       {
         refId: 'CostTable',
-        expr: `sum by (${LABELS.USER_EMAIL}, ${LABELS.MODEL}) (${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model"})`,
+        expr: QUERIES.costTableByDevice,
         instant: true,
         format: 'table',
       },
@@ -144,9 +144,9 @@ export function getCostsScene(
             new SceneFlexItem({
               width: '50%',
               body: PanelBuilders.timeseries()
-                .setTitle('Cost Over Time by Team Member')
+                .setTitle('Cost Over Time by Device')
                 .setUnit('currencyUSD')
-                .setData(costOverTimeByMemberQuery)
+                .setData(costOverTimeByDeviceQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 30)
@@ -162,9 +162,9 @@ export function getCostsScene(
             new SceneFlexItem({
               width: '40%',
               body: PanelBuilders.piechart()
-                .setTitle('Cost Distribution by Member')
+                .setTitle('Cost Distribution by Device')
                 .setUnit('currencyUSD')
-                .setData(costByMemberQuery)
+                .setData(costByDeviceQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
                 .setOption('pieType', 'donut' as never)
                 .build(),
@@ -172,11 +172,11 @@ export function getCostsScene(
             new SceneFlexItem({
               width: '60%',
               body: PanelBuilders.table()
-                .setTitle('Cost Breakdown')
+                .setTitle('Cost Breakdown by Device')
                 .setData(costTableQuery)
                 .setOption('sortBy', [{ displayName: 'Value', desc: true }])
                 .setOverrides((b) =>
-                  b.matchFieldsWithName('user_email').overrideDisplayName('Team Member')
+                  b.matchFieldsWithName('device').overrideDisplayName('Device')
                 )
                 .build(),
             }),

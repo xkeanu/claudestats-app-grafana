@@ -114,13 +114,13 @@ export function getProductivityScene(
     ],
   });
 
-  const activeTimeByMemberQuery = new SceneQueryRunner({
+  const activeTimeByDeviceQuery = new SceneQueryRunner({
     datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
     queries: [
       {
-        refId: 'ActiveTimeByMember',
-        expr: QUERIES.activeTimeByMember,
-        legendFormat: '{{user_email}}',
+        refId: 'ActiveTimeByDevice',
+        expr: QUERIES.activeTimeByDevice,
+        legendFormat: '{{device}}',
         instant: true,
       },
     ],
@@ -243,9 +243,9 @@ export function getProductivityScene(
           children: [
             new SceneFlexItem({
               body: PanelBuilders.bargauge()
-                .setTitle('Active Time by Team Member')
+                .setTitle('Active Time by Device')
                 .setUnit('s')
-                .setData(activeTimeByMemberQuery)
+                .setData(activeTimeByDeviceQuery)
                 .setOption('orientation', VizOrientation.Horizontal)
                 .setOption('displayMode', BarGaugeDisplayMode.Gradient)
                 .setOption('valueMode', BarGaugeValueMode.Text)

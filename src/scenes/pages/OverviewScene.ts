@@ -75,13 +75,13 @@ export function getOverviewScene(
     ],
   });
 
-  const costByMemberQuery = new SceneQueryRunner({
+  const costByDeviceQuery = new SceneQueryRunner({
     datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
     queries: [
       {
-        refId: 'CostByMember',
-        expr: QUERIES.costByMember,
-        legendFormat: '{{user_email}}',
+        refId: 'CostByDevice',
+        expr: QUERIES.costByDevice,
+        legendFormat: '{{device}}',
         instant: true,
       },
     ],
@@ -178,9 +178,9 @@ export function getOverviewScene(
             new SceneFlexItem({
               width: '40%',
               body: PanelBuilders.piechart()
-                .setTitle('Cost by Team Member')
+                .setTitle('Cost by Device')
                 .setUnit('currencyUSD')
-                .setData(costByMemberQuery)
+                .setData(costByDeviceQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
                 .build(),
             }),

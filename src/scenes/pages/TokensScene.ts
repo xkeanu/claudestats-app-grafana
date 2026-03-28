@@ -102,13 +102,13 @@ export function getTokensScene(
     ],
   });
 
-  const tokensByMemberQuery = new SceneQueryRunner({
+  const tokensByDeviceQuery = new SceneQueryRunner({
     datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
     queries: [
       {
-        refId: 'TokensByMember',
-        expr: QUERIES.tokensByMember,
-        legendFormat: '{{user_email}}',
+        refId: 'TokensByDevice',
+        expr: QUERIES.tokensByDevice,
+        legendFormat: '{{device}}',
         instant: true,
       },
     ],
@@ -213,9 +213,9 @@ export function getTokensScene(
             new SceneFlexItem({
               width: '50%',
               body: PanelBuilders.piechart()
-                .setTitle('Tokens by Team Member')
+                .setTitle('Tokens by Device')
                 .setUnit('short')
-                .setData(tokensByMemberQuery)
+                .setData(tokensByDeviceQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
                 .build(),
             }),
