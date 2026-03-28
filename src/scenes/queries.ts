@@ -33,7 +33,7 @@ export const QUERIES = {
   /** Total tokens (all types) */
   totalTokens: `sum(increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range]))`,
 
-  /** Tokens by type (input, output, cache_read, cache_creation) */
+  /** Tokens by type (input, output, cacheRead, cacheCreation) */
   tokensByType: `sum by (${LABELS.TOKEN_TYPE}) (increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range]))`,
 
   /** Tokens by model */
@@ -190,7 +190,7 @@ export const QUERIES = {
   costByTerminalType: `sum by (${LABELS.TERMINAL_TYPE}) (increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range]))`,
 
   /** Sessions by terminal type */
-  sessionsByTerminalType: `count by (${LABELS.TERMINAL_TYPE}) (count by (${LABELS.SESSION_ID}, ${LABELS.TERMINAL_TYPE}) (increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) > 0))`,
+  sessionsByTerminalType: `sum by (${LABELS.TERMINAL_TYPE}) (increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
 
   /** Members by OS type */
   membersByOsType: `count by (${LABELS.OS_TYPE}) (count by (${LABELS.USER_EMAIL}, ${LABELS.OS_TYPE}) (increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) > 0))`,
