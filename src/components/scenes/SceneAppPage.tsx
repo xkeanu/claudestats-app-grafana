@@ -21,7 +21,7 @@ function prefixRoute(route: string): string {
 }
 
 function getSceneApp() {
-  const timeRange = new SceneTimeRange({ from: 'now-3h', to: 'now' });
+  const timeRange = new SceneTimeRange({ from: 'now-7d', to: 'now' });
   const variables = getSharedVariables();
 
   return new SceneApp({
