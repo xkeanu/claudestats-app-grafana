@@ -14,7 +14,6 @@ import { getToolsScene } from '../../scenes/pages/ToolsScene';
 import { getProductivityScene } from '../../scenes/pages/ProductivityScene';
 import { getLanguagesScene } from '../../scenes/pages/LanguagesScene';
 import { getEnvironmentScene } from '../../scenes/pages/EnvironmentScene';
-import { getSessionsScene } from '../../scenes/pages/SessionsScene';
 
 // Helper to prefix route with plugin base URL
 function prefixRoute(route: string): string {
@@ -63,12 +62,6 @@ function getSceneApp() {
             url: prefixRoute(ROUTES.Productivity),
             routePath: `/${ROUTES.Productivity}`,
             getScene: () => getProductivityScene(timeRange, variables),
-          }),
-          new SceneAppPage({
-            title: 'Sessions',
-            url: prefixRoute(ROUTES.Sessions),
-            routePath: `/${ROUTES.Sessions}`,
-            getScene: () => getSessionsScene(timeRange, variables),
           }),
           new SceneAppPage({
             title: 'Languages',

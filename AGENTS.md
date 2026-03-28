@@ -55,8 +55,7 @@ src/
 │       ├── ToolsScene.ts      # Tool usage scene
 │       ├── ProductivityScene.ts # Productivity metrics scene
 │       ├── LanguagesScene.ts    # Language analytics scene
-│       ├── EnvironmentScene.ts  # Environment analytics scene
-│       └── SessionsScene.ts    # Session analytics scene
+│       └── EnvironmentScene.ts  # Environment analytics scene
 ├── types.ts                 # TypeScript types
 ├── constants.ts             # Metric names, labels, routes
 ├── module.ts                # Plugin entry point
@@ -72,11 +71,8 @@ src/
 3. **Tokens** - Token usage by type (input/output/cacheRead/cacheCreation), model distribution, usage over time
 4. **Tools** - Tool acceptance rate, tool decisions (accept/reject), usage by tool name, decisions over time
 5. **Productivity** - Lines of code (added/removed), commits, pull requests, active time by team member
-6. **Sessions** - Session analytics with per-session averages (tokens, duration, cost), session trends over time, intensity metrics, and device/model breakdowns
-7. **Languages** - Programming language distribution from code edits, language usage trends over time, acceptance rate by language, language usage by team member
-8. **Environment** - OS distribution, architecture, IDE/terminal usage, Claude Code version adoption, device breakdown, cost breakdown by IDE and OS, usage trends over time
-
-All trend timeseries charts use smooth line interpolation. All scenes default to 1-minute auto-refresh.
+6. **Languages** - Programming language distribution from code edits, language usage trends over time, acceptance rate by language, language usage by team member
+7. **Environment** - OS distribution, architecture, IDE/terminal usage, Claude Code version adoption, device breakdown, cost breakdown by IDE and OS, usage trends over time
 
 ### Configuration Page
 
@@ -127,13 +123,6 @@ These metrics are exported by Claude Code when OTLP is enabled. Note that OTEL a
 - `language` - Programming language of edited file (e.g., TypeScript, Python, JavaScript, Markdown)
 - `source` - How tool decision was made (config, hook, user_permanent, user_temporary, user_abort, user_reject)
 - `device` - Custom device name (set via `OTEL_RESOURCE_ATTRIBUTES="device=my-macbook"`)
-
-### Important Metric Notes
-
-- **LOC has no `language` label**: `claude_code_lines_of_code_count_total` only has `type` (added/removed). The `language` label is only on `claude_code_code_edit_tool_decision_total`.
-- **PR counter is narrow**: `claude_code_pull_request_count_total` only increments when Claude Code itself runs `gh pr create`, `glab mr create`, or recognized curl POSTs. Manual PRs are not tracked.
-- **Session counter**: `claude_code_session_count_total` is emitted once per session init. `session_id` is also available as a label on other metrics when `OTEL_METRICS_INCLUDE_SESSION_ID=true`.
-- **Token type values are camelCase**: The OTEL metric uses `cacheRead` and `cacheCreation`, not `cache_read`/`cache_creation`.
 
 ## Development
 

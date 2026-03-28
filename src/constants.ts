@@ -8,7 +8,6 @@ export const ROUTES = {
   Tokens: 'tokens',
   Tools: 'tools',
   Productivity: 'productivity',
-  Sessions: 'sessions',
   Languages: 'languages',
   Environment: 'environment',
 } as const;

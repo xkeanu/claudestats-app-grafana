@@ -11,7 +11,7 @@ import {
   SceneTimePicker,
   SceneRefreshPicker,
 } from '@grafana/scenes';
-import { LegendDisplayMode, LineInterpolation, StackingMode } from '@grafana/schema';
+import { LegendDisplayMode, StackingMode } from '@grafana/schema';
 import { QUERIES } from '../queries';
 import { PANEL_HEIGHTS } from '../../constants';
 
@@ -136,7 +136,7 @@ export function getEnvironmentScene(
       new VariableValueSelectors({}),
       new SceneControlsSpacer(),
       new SceneTimePicker({ isOnCanvas: true }),
-      new SceneRefreshPicker({ refresh: '1m', intervals: ['30s', '1m', '5m', '15m', '30m'] }),
+      new SceneRefreshPicker({ intervals: ['30s', '1m', '5m', '15m', '30m'] }),
     ],
     body: new SceneFlexLayout({
       direction: 'column',
@@ -248,7 +248,6 @@ export function getEnvironmentScene(
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 20)
-                .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
             new SceneFlexItem({
@@ -260,7 +259,6 @@ export function getEnvironmentScene(
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 20)
-                .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
           ],

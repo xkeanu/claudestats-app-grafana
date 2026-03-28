@@ -14,7 +14,6 @@ import {
 import {
   BigValueGraphMode,
   LegendDisplayMode,
-  LineInterpolation,
   StackingMode,
   BarGaugeDisplayMode,
   BarGaugeValueMode,
@@ -88,7 +87,7 @@ export function getLanguagesScene(
       new VariableValueSelectors({}),
       new SceneControlsSpacer(),
       new SceneTimePicker({ isOnCanvas: true }),
-      new SceneRefreshPicker({ refresh: '1m', intervals: ['30s', '1m', '5m', '15m', '30m'] }),
+      new SceneRefreshPicker({ intervals: ['30s', '1m', '5m', '15m', '30m'] }),
     ],
     body: new SceneFlexLayout({
       direction: 'column',
@@ -129,7 +128,6 @@ export function getLanguagesScene(
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 30)
-                .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
             new SceneFlexItem({
