@@ -103,6 +103,17 @@ export function getToolsScene(
     ],
   });
 
+  const toolDecisionsByToolAndSourceQuery = new SceneQueryRunner({
+    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
+    queries: [
+      {
+        refId: 'ToolDecisionsByToolAndSource',
+        expr: QUERIES.toolDecisionsByToolAndSource,
+        legendFormat: '{{tool_name}} - {{source}}',
+      },
+    ],
+  });
+
   return new EmbeddedScene({
     $timeRange: timeRange,
     $variables: variables,
@@ -190,6 +201,15 @@ export function getToolsScene(
                 .setTitle('Decisions by Source')
                 .setData(toolDecisionsBySourceQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
+                .setOverrides((b) =>
+                  b
+                    .matchFieldsWithName('config').overrideDisplayName('Auto (Config)')
+                    .matchFieldsWithName('hook').overrideDisplayName('Auto (Hook)')
+                    .matchFieldsWithName('user_permanent').overrideDisplayName('User (Always)')
+                    .matchFieldsWithName('user_temporary').overrideDisplayName('User (Once)')
+                    .matchFieldsWithName('user_abort').overrideDisplayName('User (Abort)')
+                    .matchFieldsWithName('user_reject').overrideDisplayName('User (Reject)')
+                )
                 .build(),
             }),
             new SceneFlexItem({
@@ -202,16 +222,41 @@ export function getToolsScene(
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 30)
                 .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
+                .setOverrides((b) =>
+                  b
+                    .matchFieldsWithName('config').overrideDisplayName('Auto (Config)')
+                    .matchFieldsWithName('hook').overrideDisplayName('Auto (Hook)')
+                    .matchFieldsWithName('user_permanent').overrideDisplayName('User (Always)')
+                    .matchFieldsWithName('user_temporary').overrideDisplayName('User (Once)')
+                    .matchFieldsWithName('user_abort').overrideDisplayName('User (Abort)')
+                    .matchFieldsWithName('user_reject').overrideDisplayName('User (Reject)')
+                )
                 .build(),
             }),
           ],
         }),
-        // Row 4: Language breakdown (on tool decisions)
+        // Row 4: Source per tool + Language breakdown
         new SceneFlexLayout({
           direction: 'row',
-          height: PANEL_HEIGHTS.MEDIUM,
+          height: PANEL_HEIGHTS.LARGE,
           children: [
             new SceneFlexItem({
+              width: '60%',
+              body: PanelBuilders.bargauge()
+                .setTitle('Source Breakdown per Tool')
+                .setUnit('short')
+                .setData(toolDecisionsByToolAndSourceQuery)
+                .setOption('displayMode', BarGaugeDisplayMode.Gradient)
+                .setOption('orientation', VizOrientation.Horizontal)
+                .setOption('valueMode', BarGaugeValueMode.Text)
+                .setOption('showUnfilled', true)
+                .setOption('minVizWidth', 150)
+                .setOption('minVizHeight', 25)
+                .setDisplayName('${__series.name}')
+                .build(),
+            }),
+            new SceneFlexItem({
+              width: '40%',
               body: PanelBuilders.piechart()
                 .setTitle('Tool Decisions by Language')
                 .setData(toolDecisionsByLanguageQuery)
