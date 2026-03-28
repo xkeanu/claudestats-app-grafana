@@ -12,6 +12,8 @@ import { getCostsScene } from '../../scenes/pages/CostsScene';
 import { getTokensScene } from '../../scenes/pages/TokensScene';
 import { getToolsScene } from '../../scenes/pages/ToolsScene';
 import { getProductivityScene } from '../../scenes/pages/ProductivityScene';
+import { getLanguagesScene } from '../../scenes/pages/LanguagesScene';
+import { getEnvironmentScene } from '../../scenes/pages/EnvironmentScene';
 
 // Helper to prefix route with plugin base URL
 function prefixRoute(route: string): string {
@@ -60,6 +62,18 @@ function getSceneApp() {
             url: prefixRoute(ROUTES.Productivity),
             routePath: `/${ROUTES.Productivity}`,
             getScene: () => getProductivityScene(timeRange, variables),
+          }),
+          new SceneAppPage({
+            title: 'Languages',
+            url: prefixRoute(ROUTES.Languages),
+            routePath: `/${ROUTES.Languages}`,
+            getScene: () => getLanguagesScene(timeRange, variables),
+          }),
+          new SceneAppPage({
+            title: 'Environment',
+            url: prefixRoute(ROUTES.Environment),
+            routePath: `/${ROUTES.Environment}`,
+            getScene: () => getEnvironmentScene(timeRange, variables),
           }),
         ],
       }),
