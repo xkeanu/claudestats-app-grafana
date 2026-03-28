@@ -1,0 +1,139 @@
+<h2>Where should Session Intensity metrics live?</h2>
+<p class="subtitle">Avg tokens/session, avg active time/session, session count trends</p>
+
+<div class="options">
+  <div class="option" data-choice="new-tab" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>New "Sessions" Tab</h3>
+      <p>Dedicated page with room to grow. Keeps other pages focused.</p>
+      <div style="margin-top: 12px; background: #1a1a2e; border-radius: 8px; padding: 12px;">
+        <div style="display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;">
+          <span style="padding: 4px 10px; background: #2a2a3e; border-radius: 4px; font-size: 12px; color: #888;">Overview</span>
+          <span style="padding: 4px 10px; background: #2a2a3e; border-radius: 4px; font-size: 12px; color: #888;">Costs</span>
+          <span style="padding: 4px 10px; background: #2a2a3e; border-radius: 4px; font-size: 12px; color: #888;">Tokens</span>
+          <span style="padding: 4px 10px; background: #2a2a3e; border-radius: 4px; font-size: 12px; color: #888;">Tools</span>
+          <span style="padding: 4px 10px; background: #2a2a3e; border-radius: 4px; font-size: 12px; color: #888;">Productivity</span>
+          <span style="padding: 4px 10px; background: #7c3aed; border-radius: 4px; font-size: 12px; color: #fff; font-weight: bold;">Sessions ✦</span>
+          <span style="padding: 4px 10px; background: #2a2a3e; border-radius: 4px; font-size: 12px; color: #888;">Languages</span>
+          <span style="padding: 4px 10px; background: #2a2a3e; border-radius: 4px; font-size: 12px; color: #888;">Environment</span>
+        </div>
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <div style="flex: 1; background: #2a2a3e; border-radius: 6px; padding: 10px; text-align: center;">
+            <div style="font-size: 10px; color: #888; text-transform: uppercase;">Avg Tokens/Session</div>
+            <div style="font-size: 20px; color: #7c3aed; font-weight: bold;">12.4k</div>
+          </div>
+          <div style="flex: 1; background: #2a2a3e; border-radius: 6px; padding: 10px; text-align: center;">
+            <div style="font-size: 10px; color: #888; text-transform: uppercase;">Avg Duration</div>
+            <div style="font-size: 20px; color: #06b6d4; font-weight: bold;">18m</div>
+          </div>
+          <div style="flex: 1; background: #2a2a3e; border-radius: 6px; padding: 10px; text-align: center;">
+            <div style="font-size: 10px; color: #888; text-transform: uppercase;">Sessions Today</div>
+            <div style="font-size: 20px; color: #22c55e; font-weight: bold;">47</div>
+          </div>
+          <div style="flex: 1; background: #2a2a3e; border-radius: 6px; padding: 10px; text-align: center;">
+            <div style="font-size: 10px; color: #888; text-transform: uppercase;">Avg Cost/Session</div>
+            <div style="font-size: 20px; color: #f59e0b; font-weight: bold;">$0.42</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <div style="flex: 1; background: #2a2a3e; border-radius: 6px; padding: 10px; height: 60px; display: flex; align-items: center; justify-content: center; color: #666; font-size: 12px;">Sessions Over Time (smooth)</div>
+          <div style="flex: 1; background: #2a2a3e; border-radius: 6px; padding: 10px; height: 60px; display: flex; align-items: center; justify-content: center; color: #666; font-size: 12px;">Intensity by Device (pie)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="overview" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>On the Overview Page</h3>
+      <p>Quick glance alongside existing stats. But Overview is already dense.</p>
+      <div style="margin-top: 12px; background: #1a1a2e; border-radius: 8px; padding: 12px;">
+        <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+          <span style="padding: 4px 10px; background: #7c3aed; border-radius: 4px; font-size: 12px; color: #fff; font-weight: bold;">Overview</span>
+          <span style="padding: 4px 10px; background: #2a2a3e; border-radius: 4px; font-size: 12px; color: #888;">Costs</span>
+          <span style="padding: 4px 10px; background: #2a2a3e; border-radius: 4px; font-size: 12px; color: #888;">...</span>
+        </div>
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <div style="flex: 1; background: #2a2a3e; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 9px; color: #888;">Total Cost</div>
+            <div style="font-size: 16px; color: #fff;">$284</div>
+          </div>
+          <div style="flex: 1; background: #2a2a3e; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 9px; color: #888;">Tokens</div>
+            <div style="font-size: 16px; color: #fff;">1.2M</div>
+          </div>
+          <div style="flex: 1; background: #2a2a3e; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 9px; color: #888;">Sessions</div>
+            <div style="font-size: 16px; color: #fff;">142</div>
+          </div>
+          <div style="flex: 1; background: #2a2a3e; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 9px; color: #888;">Users</div>
+            <div style="font-size: 16px; color: #fff;">8</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+          <div style="flex: 1; background: #2a2a3e; border: 1px dashed #7c3aed; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 9px; color: #7c3aed;">Avg Tokens/Session</div>
+            <div style="font-size: 16px; color: #7c3aed;">12.4k</div>
+          </div>
+          <div style="flex: 1; background: #2a2a3e; border: 1px dashed #7c3aed; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 9px; color: #7c3aed;">Avg Duration</div>
+            <div style="font-size: 16px; color: #7c3aed;">18m</div>
+          </div>
+        </div>
+        <div style="font-size: 10px; color: #666; text-align: center;">⬆ new stats squeezed into existing layout</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="productivity" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>On the Productivity Page</h3>
+      <p>Session intensity as a productivity signal. Natural fit alongside LOC/commits/PRs.</p>
+      <div style="margin-top: 12px; background: #1a1a2e; border-radius: 8px; padding: 12px;">
+        <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+          <span style="padding: 4px 10px; background: #2a2a3e; border-radius: 4px; font-size: 12px; color: #888;">Overview</span>
+          <span style="padding: 4px 10px; background: #2a2a3e; border-radius: 4px; font-size: 12px; color: #888;">...</span>
+          <span style="padding: 4px 10px; background: #7c3aed; border-radius: 4px; font-size: 12px; color: #fff; font-weight: bold;">Productivity</span>
+          <span style="padding: 4px 10px; background: #2a2a3e; border-radius: 4px; font-size: 12px; color: #888;">...</span>
+        </div>
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <div style="flex: 1; background: #2a2a3e; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 9px; color: #888;">Lines of Code</div>
+            <div style="font-size: 14px; color: #3b82f6;">3,421</div>
+          </div>
+          <div style="flex: 1; background: #2a2a3e; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 9px; color: #888;">Commits</div>
+            <div style="font-size: 14px; color: #22c55e;">89</div>
+          </div>
+          <div style="flex: 1; background: #2a2a3e; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 9px; color: #888;">PRs</div>
+            <div style="font-size: 14px; color: #a855f7;">12</div>
+          </div>
+          <div style="flex: 1; background: #2a2a3e; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 9px; color: #888;">Active Time</div>
+            <div style="font-size: 14px; color: #f59e0b;">14.2h</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <div style="flex: 1; background: #2a2a3e; border: 1px dashed #7c3aed; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 9px; color: #7c3aed;">Avg Tokens/Session</div>
+            <div style="font-size: 14px; color: #7c3aed;">12.4k</div>
+          </div>
+          <div style="flex: 1; background: #2a2a3e; border: 1px dashed #7c3aed; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 9px; color: #7c3aed;">Avg Duration</div>
+            <div style="font-size: 14px; color: #7c3aed;">18m</div>
+          </div>
+          <div style="flex: 1; background: #2a2a3e; border: 1px dashed #7c3aed; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 9px; color: #7c3aed;">Avg Cost/Session</div>
+            <div style="font-size: 14px; color: #7c3aed;">$0.42</div>
+          </div>
+        </div>
+        <div style="font-size: 10px; color: #666; text-align: center; margin-top: 6px;">⬆ extends existing stat row</div>
+      </div>
+    </div>
+  </div>
+</div>
