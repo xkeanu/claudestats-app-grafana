@@ -8,6 +8,8 @@ export const ROUTES = {
   Tokens: 'tokens',
   Tools: 'tools',
   Productivity: 'productivity',
+  Languages: 'languages',
+  Environment: 'environment',
 } as const;
 
 // Claude Code OpenTelemetry metric names
@@ -39,6 +41,10 @@ export const LABELS = {
   HOST_ARCH: 'host_arch',
   SERVICE_VERSION: 'service_version',
   TERMINAL_TYPE: 'terminal_type',
+  LANGUAGE: 'language',
+  DECISION_SOURCE: 'source',
+  ACTIVE_TIME_TYPE: 'type', // user (keyboard), cli (tool execution/AI)
+  DEVICE: 'device', // custom resource attribute via OTEL_RESOURCE_ATTRIBUTES="device=my-macbook"
 } as const;
 
 // Default time ranges

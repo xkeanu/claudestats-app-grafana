@@ -26,7 +26,6 @@ export function getOverviewScene(
       {
         refId: 'TotalCost',
         expr: QUERIES.totalCost,
-        instant: true,
       },
     ],
   });
@@ -37,7 +36,6 @@ export function getOverviewScene(
       {
         refId: 'TotalTokens',
         expr: QUERIES.totalTokens,
-        instant: true,
       },
     ],
   });
@@ -48,7 +46,6 @@ export function getOverviewScene(
       {
         refId: 'TotalSessions',
         expr: QUERIES.totalSessions,
-        instant: true,
       },
     ],
   });
@@ -59,7 +56,6 @@ export function getOverviewScene(
       {
         refId: 'ActiveUsers',
         expr: QUERIES.activeUsers,
-        instant: true,
       },
     ],
   });
@@ -75,14 +71,13 @@ export function getOverviewScene(
     ],
   });
 
-  const costByMemberQuery = new SceneQueryRunner({
+  const costByDeviceQuery = new SceneQueryRunner({
     datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
     queries: [
       {
-        refId: 'CostByMember',
-        expr: QUERIES.costByMember,
-        legendFormat: '{{user_email}}',
-        instant: true,
+        refId: 'CostByDevice',
+        expr: QUERIES.costByDevice,
+        legendFormat: '{{device}}',
       },
     ],
   });
@@ -98,61 +93,13 @@ export function getOverviewScene(
     ],
   });
 
-  const activeTimeOverTimeQuery = new SceneQueryRunner({
+  const activeTimeByTypeOverTimeQuery = new SceneQueryRunner({
     datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
     queries: [
       {
-        refId: 'ActiveTimeOverTime',
-        expr: QUERIES.activeTimeOverTime,
-      },
-    ],
-  });
-
-  // Environment queries
-  const usageByOsTypeQuery = new SceneQueryRunner({
-    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
-    queries: [
-      {
-        refId: 'UsageByOsType',
-        expr: QUERIES.usageByOsType,
-        legendFormat: '{{os_type}}',
-        instant: true,
-      },
-    ],
-  });
-
-  const usageByHostArchQuery = new SceneQueryRunner({
-    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
-    queries: [
-      {
-        refId: 'UsageByHostArch',
-        expr: QUERIES.usageByHostArch,
-        legendFormat: '{{host_arch}}',
-        instant: true,
-      },
-    ],
-  });
-
-  const usageByTerminalTypeQuery = new SceneQueryRunner({
-    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
-    queries: [
-      {
-        refId: 'UsageByTerminalType',
-        expr: QUERIES.usageByTerminalType,
-        legendFormat: '{{terminal_type}}',
-        instant: true,
-      },
-    ],
-  });
-
-  const usageByServiceVersionQuery = new SceneQueryRunner({
-    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
-    queries: [
-      {
-        refId: 'UsageByServiceVersion',
-        expr: QUERIES.usageByServiceVersion,
-        legendFormat: '{{service_version}}',
-        instant: true,
+        refId: 'ActiveTimeByTypeOverTime',
+        expr: QUERIES.activeTimeByTypeOverTime,
+        legendFormat: '{{type}}',
       },
     ],
   });
@@ -226,9 +173,9 @@ export function getOverviewScene(
             new SceneFlexItem({
               width: '40%',
               body: PanelBuilders.piechart()
-                .setTitle('Cost by Team Member')
+                .setTitle('Cost by Device')
                 .setUnit('currencyUSD')
-                .setData(costByMemberQuery)
+                .setData(costByDeviceQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
                 .build(),
             }),
@@ -254,51 +201,10 @@ export function getOverviewScene(
               body: PanelBuilders.timeseries()
                 .setTitle('Active Time Over Time')
                 .setUnit('s')
-                .setData(activeTimeOverTimeQuery)
+                .setData(activeTimeByTypeOverTimeQuery)
+                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+                .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 20)
-                .build(),
-            }),
-          ],
-        }),
-        // Row 4: Environment
-        new SceneFlexLayout({
-          direction: 'row',
-          height: PANEL_HEIGHTS.MEDIUM,
-          children: [
-            new SceneFlexItem({
-              width: '25%',
-              body: PanelBuilders.piechart()
-                .setTitle('OS Type')
-                .setData(usageByOsTypeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
-                .setOption('pieType', 'donut' as never)
-                .build(),
-            }),
-            new SceneFlexItem({
-              width: '25%',
-              body: PanelBuilders.piechart()
-                .setTitle('Architecture')
-                .setData(usageByHostArchQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
-                .setOption('pieType', 'donut' as never)
-                .build(),
-            }),
-            new SceneFlexItem({
-              width: '25%',
-              body: PanelBuilders.piechart()
-                .setTitle('Terminal')
-                .setData(usageByTerminalTypeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
-                .setOption('pieType', 'donut' as never)
-                .build(),
-            }),
-            new SceneFlexItem({
-              width: '25%',
-              body: PanelBuilders.piechart()
-                .setTitle('Claude Code Version')
-                .setData(usageByServiceVersionQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
-                .setOption('pieType', 'donut' as never)
                 .build(),
             }),
           ],

@@ -16,7 +16,7 @@ import {
   LegendDisplayMode,
   StackingMode,
 } from '@grafana/schema';
-import { QUERIES } from '../queries';
+import { QUERIES, ENV_FILTERS } from '../queries';
 import { PANEL_HEIGHTS, LABELS, METRICS } from '../../constants';
 
 export function getTokensScene(
@@ -29,7 +29,6 @@ export function getTokensScene(
       {
         refId: 'TotalTokens',
         expr: QUERIES.totalTokens,
-        instant: true,
       },
     ],
   });
@@ -39,8 +38,7 @@ export function getTokensScene(
     queries: [
       {
         refId: 'InputTokens',
-        expr: `sum(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${LABELS.TOKEN_TYPE}="input"})`,
-        instant: true,
+        expr: `sum(increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${LABELS.TOKEN_TYPE}="input", ${ENV_FILTERS}}[$__range]))`,
       },
     ],
   });
@@ -50,8 +48,7 @@ export function getTokensScene(
     queries: [
       {
         refId: 'OutputTokens',
-        expr: `sum(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${LABELS.TOKEN_TYPE}="output"})`,
-        instant: true,
+        expr: `sum(increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${LABELS.TOKEN_TYPE}="output", ${ENV_FILTERS}}[$__range]))`,
       },
     ],
   });
@@ -61,8 +58,7 @@ export function getTokensScene(
     queries: [
       {
         refId: 'CacheReadTokens',
-        expr: `sum(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${LABELS.TOKEN_TYPE}="cache_read"})`,
-        instant: true,
+        expr: `sum(increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${LABELS.TOKEN_TYPE}="cache_read", ${ENV_FILTERS}}[$__range]))`,
       },
     ],
   });
@@ -74,7 +70,6 @@ export function getTokensScene(
         refId: 'TokensByType',
         expr: QUERIES.tokensByType,
         legendFormat: '{{type}}',
-        instant: true,
       },
     ],
   });
@@ -97,19 +92,17 @@ export function getTokensScene(
         refId: 'TokensByModel',
         expr: QUERIES.tokensByModel,
         legendFormat: '{{model}}',
-        instant: true,
       },
     ],
   });
 
-  const tokensByMemberQuery = new SceneQueryRunner({
+  const tokensByDeviceQuery = new SceneQueryRunner({
     datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
     queries: [
       {
-        refId: 'TokensByMember',
-        expr: QUERIES.tokensByMember,
-        legendFormat: '{{user_email}}',
-        instant: true,
+        refId: 'TokensByDevice',
+        expr: QUERIES.tokensByDevice,
+        legendFormat: '{{device}}',
       },
     ],
   });
@@ -213,9 +206,9 @@ export function getTokensScene(
             new SceneFlexItem({
               width: '50%',
               body: PanelBuilders.piechart()
-                .setTitle('Tokens by Team Member')
+                .setTitle('Tokens by Device')
                 .setUnit('short')
-                .setData(tokensByMemberQuery)
+                .setData(tokensByDeviceQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
                 .build(),
             }),

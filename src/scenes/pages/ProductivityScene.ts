@@ -33,7 +33,6 @@ export function getProductivityScene(
       {
         refId: 'TotalLinesOfCode',
         expr: QUERIES.totalLinesOfCode,
-        instant: true,
       },
     ],
   });
@@ -44,7 +43,6 @@ export function getProductivityScene(
       {
         refId: 'TotalCommits',
         expr: QUERIES.totalCommits,
-        instant: true,
       },
     ],
   });
@@ -55,7 +53,6 @@ export function getProductivityScene(
       {
         refId: 'TotalPullRequests',
         expr: QUERIES.totalPullRequests,
-        instant: true,
       },
     ],
   });
@@ -66,7 +63,6 @@ export function getProductivityScene(
       {
         refId: 'TotalActiveTime',
         expr: QUERIES.totalActiveTime,
-        instant: true,
       },
     ],
   });
@@ -78,7 +74,6 @@ export function getProductivityScene(
         refId: 'LinesOfCodeByType',
         expr: QUERIES.linesOfCodeByType,
         legendFormat: '{{type}}',
-        instant: true,
       },
     ],
   });
@@ -114,14 +109,13 @@ export function getProductivityScene(
     ],
   });
 
-  const activeTimeByMemberQuery = new SceneQueryRunner({
+  const activeTimeByDeviceQuery = new SceneQueryRunner({
     datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
     queries: [
       {
-        refId: 'ActiveTimeByMember',
-        expr: QUERIES.activeTimeByMember,
-        legendFormat: '{{user_email}}',
-        instant: true,
+        refId: 'ActiveTimeByDevice',
+        expr: QUERIES.activeTimeByDevice,
+        legendFormat: '{{device}}',
       },
     ],
   });
@@ -243,9 +237,9 @@ export function getProductivityScene(
           children: [
             new SceneFlexItem({
               body: PanelBuilders.bargauge()
-                .setTitle('Active Time by Team Member')
+                .setTitle('Active Time by Device')
                 .setUnit('s')
-                .setData(activeTimeByMemberQuery)
+                .setData(activeTimeByDeviceQuery)
                 .setOption('orientation', VizOrientation.Horizontal)
                 .setOption('displayMode', BarGaugeDisplayMode.Gradient)
                 .setOption('valueMode', BarGaugeValueMode.Text)

@@ -53,7 +53,9 @@ src/
 │       ├── CostsScene.ts      # Cost analytics scene
 │       ├── TokensScene.ts     # Token usage scene
 │       ├── ToolsScene.ts      # Tool usage scene
-│       └── ProductivityScene.ts # Productivity metrics scene
+│       ├── ProductivityScene.ts # Productivity metrics scene
+│       ├── LanguagesScene.ts    # Language analytics scene
+│       └── EnvironmentScene.ts  # Environment analytics scene
 ├── types.ts                 # TypeScript types
 ├── constants.ts             # Metric names, labels, routes
 ├── module.ts                # Plugin entry point
@@ -69,6 +71,8 @@ src/
 3. **Tokens** - Token usage by type (input/output/cache_read/cache_creation), model distribution, usage over time
 4. **Tools** - Tool acceptance rate, tool decisions (accept/reject), usage by tool name, decisions over time
 5. **Productivity** - Lines of code (added/removed), commits, pull requests, active time by team member
+6. **Languages** - Programming language distribution from code edits, language usage trends over time, acceptance rate by language, language usage by team member
+7. **Environment** - OS distribution, architecture, IDE/terminal usage, Claude Code version adoption, device breakdown, cost breakdown by IDE and OS, usage trends over time
 
 ### Configuration Page
 
@@ -81,7 +85,10 @@ All setup and configuration is consolidated in the plugin Configuration page (Ad
 
 - QueryVariable for filtering by `user_email` (team members identified by email address)
 - QueryVariable for filtering by `model`
-- All scenes support filtering to individual team members or models
+- QueryVariable for filtering by `terminal_type` (IDE/Terminal: vscode, cursor, iTerm, tmux, etc.)
+- QueryVariable for filtering by `os_type` (darwin, linux, windows)
+- QueryVariable for filtering by `device` (custom device name via OTEL_RESOURCE_ATTRIBUTES)
+- All scenes support filtering to individual team members, models, IDEs, OS, and devices
 - "All" option for aggregate views
 
 ### Data Source Discovery
@@ -113,6 +120,9 @@ These metrics are exported by Claude Code when OTLP is enabled. Note that OTEL a
 - `session_id` - Unique session identifier
 - `tool_name` - Tool name for tool decision metrics (e.g., Edit, Write, Bash)
 - `decision` - Tool decision value (accept, reject)
+- `language` - Programming language of edited file (e.g., TypeScript, Python, JavaScript, Markdown)
+- `source` - How tool decision was made (config, hook, user_permanent, user_temporary, user_abort, user_reject)
+- `device` - Custom device name (set via `OTEL_RESOURCE_ATTRIBUTES="device=my-macbook"`)
 
 ## Development
 
