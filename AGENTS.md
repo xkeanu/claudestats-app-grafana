@@ -120,13 +120,20 @@ These metrics are exported by Claude Code when OTLP is enabled. Note that OTEL a
 - `user_email` - User's email address (primary identifier for team members)
 - `user_account_uuid` - Anonymized user identifier (for privacy-sensitive deployments)
 - `model` - Claude model used (e.g., claude-sonnet-4-20250514, claude-opus-4-5-20250514)
-- `type` - Token type (input, output, cache_read, cache_creation) or LOC type (added, removed)
+- `type` - Token type (input, output, cacheRead, cacheCreation) or LOC type (added, removed) or active time type (user, cli)
 - `session_id` - Unique session identifier
 - `tool_name` - Tool name for tool decision metrics (e.g., Edit, Write, Bash)
 - `decision` - Tool decision value (accept, reject)
 - `language` - Programming language of edited file (e.g., TypeScript, Python, JavaScript, Markdown)
 - `source` - How tool decision was made (config, hook, user_permanent, user_temporary, user_abort, user_reject)
 - `device` - Custom device name (set via `OTEL_RESOURCE_ATTRIBUTES="device=my-macbook"`)
+
+### Important Metric Notes
+
+- **LOC has no `language` label**: `claude_code_lines_of_code_count_total` only has `type` (added/removed). The `language` label is only on `claude_code_code_edit_tool_decision_total`.
+- **PR counter is narrow**: `claude_code_pull_request_count_total` only increments when Claude Code itself runs `gh pr create`, `glab mr create`, or recognized curl POSTs. Manual PRs are not tracked.
+- **Session counter**: `claude_code_session_count_total` is emitted once per session init. `session_id` is also available as a label on other metrics when `OTEL_METRICS_INCLUDE_SESSION_ID=true`.
+- **Token type values are camelCase**: The OTEL metric uses `cacheRead` and `cacheCreation`, not `cache_read`/`cache_creation`.
 
 ## Development
 
