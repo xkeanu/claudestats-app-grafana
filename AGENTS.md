@@ -69,11 +69,11 @@ src/
 
 1. **Overview** - High-level stats (total cost, tokens, sessions, active users) with cost and token trend charts
 2. **Costs** - Cost breakdown by model and team member, daily trends, cost distribution pie charts, detailed table
-3. **Tokens** - Token usage by type (input/output/cache_read/cache_creation), model distribution, usage over time
+3. **Tokens** - Token usage by type (input/output/cacheRead/cacheCreation), model distribution, usage over time
 4. **Tools** - Tool acceptance rate, tool decisions (accept/reject), usage by tool name, decisions over time
-5. **Productivity** - Lines of code (added/removed), commits, pull requests, active time by team member, top languages by LOC
+5. **Productivity** - Lines of code (added/removed), commits, pull requests, active time by team member
 6. **Sessions** - Session analytics with per-session averages (tokens, duration, cost), session trends over time, intensity metrics, and device/model breakdowns
-7. **Languages** - Programming language distribution from code edits, language usage trends over time, acceptance rate by language, lines of code by language (piechart, bar gauge, trends), language usage by team member
+7. **Languages** - Programming language distribution from code edits, language usage trends over time, acceptance rate by language, language usage by team member
 8. **Environment** - OS distribution, architecture, IDE/terminal usage, Claude Code version adoption, device breakdown, cost breakdown by IDE and OS, usage trends over time
 
 All trend timeseries charts use smooth line interpolation. All scenes default to 1-minute auto-refresh.
