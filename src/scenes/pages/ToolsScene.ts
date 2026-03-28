@@ -72,6 +72,41 @@ export function getToolsScene(
     ],
   });
 
+  const toolDecisionsBySourceQuery = new SceneQueryRunner({
+    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
+    queries: [
+      {
+        refId: 'ToolDecisionsBySource',
+        expr: QUERIES.toolDecisionsBySource,
+        legendFormat: '{{source}}',
+        instant: true,
+      },
+    ],
+  });
+
+  const toolDecisionsBySourceOverTimeQuery = new SceneQueryRunner({
+    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
+    queries: [
+      {
+        refId: 'ToolDecisionsBySourceOverTime',
+        expr: QUERIES.toolDecisionsBySourceOverTime,
+        legendFormat: '{{source}}',
+      },
+    ],
+  });
+
+  const toolDecisionsByLanguageQuery = new SceneQueryRunner({
+    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
+    queries: [
+      {
+        refId: 'ToolDecisionsByLanguage',
+        expr: QUERIES.toolDecisionsByLanguage,
+        legendFormat: '{{language}}',
+        instant: true,
+      },
+    ],
+  });
+
   return new EmbeddedScene({
     $timeRange: timeRange,
     $variables: variables,
@@ -143,6 +178,46 @@ export function getToolsScene(
                 .setOption('minVizWidth', 150)
                 .setOption('minVizHeight', 25)
                 .setDisplayName('${__series.name}')
+                .build(),
+            }),
+          ],
+        }),
+        // Row 3: Decision source breakdown
+        new SceneFlexLayout({
+          direction: 'row',
+          height: PANEL_HEIGHTS.LARGE,
+          children: [
+            new SceneFlexItem({
+              width: '40%',
+              body: PanelBuilders.piechart()
+                .setTitle('Decisions by Source')
+                .setData(toolDecisionsBySourceQuery)
+                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
+                .build(),
+            }),
+            new SceneFlexItem({
+              width: '60%',
+              body: PanelBuilders.timeseries()
+                .setTitle('Decision Source Over Time')
+                .setUnit('short')
+                .setData(toolDecisionsBySourceOverTimeQuery)
+                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+                .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
+                .setCustomFieldConfig('fillOpacity', 30)
+                .build(),
+            }),
+          ],
+        }),
+        // Row 4: Language breakdown (on tool decisions)
+        new SceneFlexLayout({
+          direction: 'row',
+          height: PANEL_HEIGHTS.MEDIUM,
+          children: [
+            new SceneFlexItem({
+              body: PanelBuilders.piechart()
+                .setTitle('Tool Decisions by Language')
+                .setData(toolDecisionsByLanguageQuery)
+                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
                 .build(),
             }),
           ],
