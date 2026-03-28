@@ -121,6 +121,17 @@ export function getProductivityScene(
     ],
   });
 
+  const linesOfCodeByLanguageQuery = new SceneQueryRunner({
+    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
+    queries: [
+      {
+        refId: 'LinesOfCodeByLanguage',
+        expr: QUERIES.linesOfCodeByLanguage,
+        legendFormat: '{{language}}',
+      },
+    ],
+  });
+
   return new EmbeddedScene({
     $timeRange: timeRange,
     $variables: variables,
@@ -182,7 +193,7 @@ export function getProductivityScene(
           height: PANEL_HEIGHTS.LARGE,
           children: [
             new SceneFlexItem({
-              width: '35%',
+              width: '25%',
               body: PanelBuilders.piechart()
                 .setTitle('Lines Added vs Removed')
                 .setUnit('short')
@@ -192,7 +203,7 @@ export function getProductivityScene(
                 .build(),
             }),
             new SceneFlexItem({
-              width: '65%',
+              width: '45%',
               body: PanelBuilders.timeseries()
                 .setTitle('Lines of Code Over Time')
                 .setUnit('short')
@@ -201,6 +212,15 @@ export function getProductivityScene(
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 30)
                 .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
+                .build(),
+            }),
+            new SceneFlexItem({
+              width: '30%',
+              body: PanelBuilders.piechart()
+                .setTitle('Top Languages by LOC')
+                .setUnit('short')
+                .setData(linesOfCodeByLanguageQuery)
+                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .build(),
             }),
           ],
