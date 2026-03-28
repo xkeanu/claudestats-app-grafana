@@ -47,7 +47,7 @@ export const QUERIES = {
 
   // ==================== SESSION QUERIES ====================
 
-  /** Total sessions - count unique session_id labels */
+  /** Total sessions - uses SESSION_COUNT metric */
   totalSessions: `sum(increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
 
   /** Sessions by device */
