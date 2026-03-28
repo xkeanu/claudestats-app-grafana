@@ -33,7 +33,6 @@ export function getProductivityScene(
       {
         refId: 'TotalLinesOfCode',
         expr: QUERIES.totalLinesOfCode,
-        instant: true,
       },
     ],
   });
@@ -44,7 +43,6 @@ export function getProductivityScene(
       {
         refId: 'TotalCommits',
         expr: QUERIES.totalCommits,
-        instant: true,
       },
     ],
   });
@@ -55,7 +53,6 @@ export function getProductivityScene(
       {
         refId: 'TotalPullRequests',
         expr: QUERIES.totalPullRequests,
-        instant: true,
       },
     ],
   });
@@ -66,7 +63,6 @@ export function getProductivityScene(
       {
         refId: 'TotalActiveTime',
         expr: QUERIES.totalActiveTime,
-        instant: true,
       },
     ],
   });
@@ -78,7 +74,6 @@ export function getProductivityScene(
         refId: 'LinesOfCodeByType',
         expr: QUERIES.linesOfCodeByType,
         legendFormat: '{{type}}',
-        instant: true,
       },
     ],
   });
@@ -121,7 +116,6 @@ export function getProductivityScene(
         refId: 'ActiveTimeByDevice',
         expr: QUERIES.activeTimeByDevice,
         legendFormat: '{{device}}',
-        instant: true,
       },
     ],
   });

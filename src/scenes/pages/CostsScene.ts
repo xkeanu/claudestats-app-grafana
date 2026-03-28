@@ -25,7 +25,6 @@ export function getCostsScene(
       {
         refId: 'TotalCost',
         expr: QUERIES.totalCost,
-        instant: true,
       },
     ],
   });
@@ -37,7 +36,6 @@ export function getCostsScene(
         refId: 'CostByModel',
         expr: QUERIES.costByModel,
         legendFormat: '{{model}}',
-        instant: true,
       },
     ],
   });
@@ -71,7 +69,6 @@ export function getCostsScene(
         refId: 'CostByDevice',
         expr: QUERIES.costByDevice,
         legendFormat: '{{device}}',
-        instant: true,
       },
     ],
   });
@@ -83,7 +80,6 @@ export function getCostsScene(
       {
         refId: 'CostTable',
         expr: QUERIES.costTableByDevice,
-        instant: true,
         format: 'table',
       },
     ],

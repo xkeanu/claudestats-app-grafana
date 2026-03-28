@@ -32,7 +32,6 @@ export function getLanguagesScene(
       {
         refId: 'TotalLanguages',
         expr: QUERIES.totalLanguages,
-        instant: true,
       },
     ],
   });
@@ -44,7 +43,6 @@ export function getLanguagesScene(
         refId: 'ToolDecisionsByLanguage',
         expr: QUERIES.toolDecisionsByLanguage,
         legendFormat: '{{language}}',
-        instant: true,
       },
     ],
   });
@@ -67,7 +65,6 @@ export function getLanguagesScene(
         refId: 'LanguageAcceptanceRate',
         expr: QUERIES.languageAcceptanceRate,
         legendFormat: '{{language}}',
-        instant: true,
       },
     ],
   });
@@ -79,7 +76,6 @@ export function getLanguagesScene(
         refId: 'ToolDecisionsByLanguageAndDevice',
         expr: QUERIES.toolDecisionsByLanguageAndDevice,
         legendFormat: '{{language}} - {{device}}',
-        instant: true,
       },
     ],
   });

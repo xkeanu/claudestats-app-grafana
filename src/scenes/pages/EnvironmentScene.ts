@@ -26,7 +26,6 @@ export function getEnvironmentScene(
         refId: 'UsageByOsType',
         expr: QUERIES.usageByOsType,
         legendFormat: '{{os_type}}',
-        instant: true,
       },
     ],
   });
@@ -38,7 +37,6 @@ export function getEnvironmentScene(
         refId: 'UsageByHostArch',
         expr: QUERIES.usageByHostArch,
         legendFormat: '{{host_arch}}',
-        instant: true,
       },
     ],
   });
@@ -50,7 +48,6 @@ export function getEnvironmentScene(
         refId: 'UsageByTerminalType',
         expr: QUERIES.usageByTerminalType,
         legendFormat: '{{terminal_type}}',
-        instant: true,
       },
     ],
   });
@@ -62,7 +59,6 @@ export function getEnvironmentScene(
         refId: 'UsageByServiceVersion',
         expr: QUERIES.usageByServiceVersion,
         legendFormat: '{{service_version}}',
-        instant: true,
       },
     ],
   });
@@ -74,7 +70,6 @@ export function getEnvironmentScene(
         refId: 'CostByTerminalType',
         expr: QUERIES.costByTerminalType,
         legendFormat: '{{terminal_type}}',
-        instant: true,
       },
     ],
   });
@@ -86,7 +81,6 @@ export function getEnvironmentScene(
         refId: 'CostByOsType',
         expr: QUERIES.costByOsType,
         legendFormat: '{{os_type}}',
-        instant: true,
       },
     ],
   });
@@ -109,7 +103,6 @@ export function getEnvironmentScene(
         refId: 'UsageByDevice',
         expr: QUERIES.usageByDevice,
         legendFormat: '{{device}}',
-        instant: true,
       },
     ],
   });
@@ -121,7 +114,6 @@ export function getEnvironmentScene(
         refId: 'CostByDevice',
         expr: QUERIES.costByDeviceEnv,
         legendFormat: '{{device}}',
-        instant: true,
       },
     ],
   });

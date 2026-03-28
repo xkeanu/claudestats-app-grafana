@@ -19,7 +19,7 @@ import {
   BarGaugeValueMode,
   VizOrientation,
 } from '@grafana/schema';
-import { QUERIES } from '../queries';
+import { QUERIES, ENV_FILTERS } from '../queries';
 import { PANEL_HEIGHTS, LABELS, METRICS } from '../../constants';
 
 export function getToolsScene(
@@ -33,7 +33,6 @@ export function getToolsScene(
         refId: 'ToolDecisions',
         expr: QUERIES.toolDecisions,
         legendFormat: '{{decision}}',
-        instant: true,
       },
     ],
   });
@@ -45,7 +44,6 @@ export function getToolsScene(
         refId: 'ToolDecisionsByTool',
         expr: QUERIES.toolDecisionsByTool,
         legendFormat: '{{tool_name}}',
-        instant: true,
       },
     ],
   });
@@ -56,7 +54,6 @@ export function getToolsScene(
       {
         refId: 'ToolAcceptanceRate',
         expr: QUERIES.toolAcceptanceRate,
-        instant: true,
       },
     ],
   });
@@ -66,7 +63,7 @@ export function getToolsScene(
     queries: [
       {
         refId: 'ToolDecisionsOverTime',
-        expr: `sum(increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member"}[$__rate_interval])) by (${LABELS.DECISION})`,
+        expr: `sum(increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval])) by (${LABELS.DECISION})`,
         legendFormat: '{{decision}}',
       },
     ],
@@ -79,7 +76,6 @@ export function getToolsScene(
         refId: 'ToolDecisionsBySource',
         expr: QUERIES.toolDecisionsBySource,
         legendFormat: '{{source}}',
-        instant: true,
       },
     ],
   });
@@ -102,7 +98,6 @@ export function getToolsScene(
         refId: 'ToolDecisionsByLanguage',
         expr: QUERIES.toolDecisionsByLanguage,
         legendFormat: '{{language}}',
-        instant: true,
       },
     ],
   });

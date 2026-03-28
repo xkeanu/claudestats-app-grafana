@@ -26,7 +26,6 @@ export function getOverviewScene(
       {
         refId: 'TotalCost',
         expr: QUERIES.totalCost,
-        instant: true,
       },
     ],
   });
@@ -37,7 +36,6 @@ export function getOverviewScene(
       {
         refId: 'TotalTokens',
         expr: QUERIES.totalTokens,
-        instant: true,
       },
     ],
   });
@@ -48,7 +46,6 @@ export function getOverviewScene(
       {
         refId: 'TotalSessions',
         expr: QUERIES.totalSessions,
-        instant: true,
       },
     ],
   });
@@ -59,7 +56,6 @@ export function getOverviewScene(
       {
         refId: 'ActiveUsers',
         expr: QUERIES.activeUsers,
-        instant: true,
       },
     ],
   });
@@ -82,7 +78,6 @@ export function getOverviewScene(
         refId: 'CostByDevice',
         expr: QUERIES.costByDevice,
         legendFormat: '{{device}}',
-        instant: true,
       },
     ],
   });
