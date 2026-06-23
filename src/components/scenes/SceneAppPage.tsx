@@ -12,6 +12,7 @@ import { getCostsScene } from '../../scenes/pages/CostsScene';
 import { getTokensScene } from '../../scenes/pages/TokensScene';
 import { getToolsScene } from '../../scenes/pages/ToolsScene';
 import { getProductivityScene } from '../../scenes/pages/ProductivityScene';
+import { getSessionsScene } from '../../scenes/pages/SessionsScene';
 import { getLanguagesScene } from '../../scenes/pages/LanguagesScene';
 import { getEnvironmentScene } from '../../scenes/pages/EnvironmentScene';
 
@@ -62,6 +63,12 @@ function getSceneApp() {
             url: prefixRoute(ROUTES.Productivity),
             routePath: `/${ROUTES.Productivity}`,
             getScene: () => getProductivityScene(timeRange, variables),
+          }),
+          new SceneAppPage({
+            title: 'Sessions',
+            url: prefixRoute(ROUTES.Sessions),
+            routePath: `/${ROUTES.Sessions}`,
+            getScene: () => getSessionsScene(timeRange, variables),
           }),
           new SceneAppPage({
             title: 'Languages',

@@ -136,7 +136,7 @@ export function getEnvironmentScene(
       new VariableValueSelectors({}),
       new SceneControlsSpacer(),
       new SceneTimePicker({ isOnCanvas: true }),
-      new SceneRefreshPicker({ intervals: ['30s', '1m', '5m', '15m', '30m'] }),
+      new SceneRefreshPicker({ refresh: '1m', intervals: ['30s', '1m', '5m', '15m', '30m'] }),
     ],
     body: new SceneFlexLayout({
       direction: 'column',

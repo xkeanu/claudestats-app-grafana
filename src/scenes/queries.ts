@@ -20,20 +20,20 @@ export const QUERIES = {
   costByModel: `sum by (${LABELS.MODEL}) (increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
 
   /** Cost breakdown by device */
-  costByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.COST_USAGE}{${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range]))`,
+  costByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range]))`,
 
   /** Cost over time (rate) */
   costOverTime: `sum(increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__rate_interval])) by (${LABELS.MODEL})`,
 
   /** Cost over time by device */
-  costOverTimeByDevice: `sum(increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__rate_interval])) by (${LABELS.DEVICE})`,
+  costOverTimeByDevice: `sum(increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__rate_interval])) by (${LABELS.DEVICE})`,
 
   // ==================== TOKEN QUERIES ====================
 
   /** Total tokens (all types) */
   totalTokens: `sum(increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range]))`,
 
-  /** Tokens by type (input, output, cache_read, cache_creation) */
+  /** Tokens by type (input, output, cacheRead, cacheCreation) */
   tokensByType: `sum by (${LABELS.TOKEN_TYPE}) (increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range]))`,
 
   /** Tokens by model */
@@ -43,50 +43,71 @@ export const QUERIES = {
   tokensOverTime: `sum(rate(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__rate_interval])) by (${LABELS.TOKEN_TYPE})`,
 
   /** Tokens by device */
-  tokensByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.TOKEN_USAGE}{${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range]))`,
+  tokensByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range]))`,
 
   // ==================== SESSION QUERIES ====================
 
-  /** Total sessions - count unique session_id labels */
-  totalSessions: `count(count by (${LABELS.SESSION_ID}) (increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) > 0))`,
+  /** Total sessions */
+  totalSessions: `round(sum(increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])))`,
 
   /** Sessions by device */
-  sessionsByDevice: `count by (${LABELS.DEVICE}) (count by (${LABELS.SESSION_ID}, ${LABELS.DEVICE}) (increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) > 0))`,
+  sessionsByDevice: `round(sum by (${LABELS.DEVICE}) (increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range])))`,
 
-  /** Active users - count unique user_email labels */
-  activeUsers: `count(count by (${LABELS.USER_EMAIL}) (increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) > 0))`,
+  /** Average tokens per session */
+  avgTokensPerSession: `(sum(increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range])) or vector(0)) / clamp_min(round(sum(increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))) or vector(0), 1)`,
+
+  /** Average active time per session */
+  avgActiveTimePerSession: `(sum(increase(${METRICS.ACTIVE_TIME}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])) or vector(0)) / clamp_min(round(sum(increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))) or vector(0), 1)`,
+
+  /** Average cost per session */
+  avgCostPerSession: `(sum(increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range])) or vector(0)) / clamp_min(round(sum(increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))) or vector(0), 1)`,
+
+  /** Sessions over time by device */
+  sessionsOverTime: `round(sum by (${LABELS.DEVICE}) (increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__rate_interval])))`,
+
+  /** Tokens per session over time */
+  sessionIntensityOverTime: `(sum(increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__rate_interval])) or vector(0)) / clamp_min(round(sum(increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]))) or vector(0), 1)`,
+
+  /** Sessions by model */
+  sessionsByModel: `round(sum by (${LABELS.MODEL}) (increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range])))`,
+
+  /** Active users over time */
+  activeUsersOverTime: `count(count by (${LABELS.USER_EMAIL}) (increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]) > 0))`,
+
+  /** Active users - count unique user_email labels with session activity */
+  activeUsers: `count(count by (${LABELS.USER_EMAIL}) (increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) > 0))`,
 
   // ==================== PRODUCTIVITY QUERIES ====================
 
   /** Total lines of code (added + removed) */
-  totalLinesOfCode: `sum(increase(${METRICS.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
+  totalLinesOfCode: `round(sum(increase(${METRICS.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])))`,
 
   /** Lines of code by type (added, removed) */
-  linesOfCodeByType: `sum by (${LABELS.LOC_TYPE}) (increase(${METRICS.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
+  linesOfCodeByType: `round(sum by (${LABELS.LOC_TYPE}) (increase(${METRICS.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])))`,
 
   /** Lines of code by device */
-  linesOfCodeByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.LINES_OF_CODE}{${ENV_FILTERS}}[$__range]))`,
+  linesOfCodeByDevice: `round(sum by (${LABELS.DEVICE}) (increase(${METRICS.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range])))`,
 
   /** Lines of code over time */
-  linesOfCodeOverTime: `sum(increase(${METRICS.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval])) by (${LABELS.LOC_TYPE})`,
+  linesOfCodeOverTime: `round(sum(increase(${METRICS.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval])) by (${LABELS.LOC_TYPE}))`,
 
   /** Total commits */
-  totalCommits: `sum(increase(${METRICS.COMMITS}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
+  totalCommits: `round(sum(increase(${METRICS.COMMITS}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])))`,
 
   /** Commits by device */
-  commitsByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.COMMITS}{${ENV_FILTERS}}[$__range]))`,
+  commitsByDevice: `round(sum by (${LABELS.DEVICE}) (increase(${METRICS.COMMITS}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range])))`,
 
   /** Commits over time */
-  commitsOverTime: `sum(increase(${METRICS.COMMITS}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]))`,
+  commitsOverTime: `round(sum(increase(${METRICS.COMMITS}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval])) or vector(0))`,
 
   /** Total pull requests */
-  totalPullRequests: `sum(increase(${METRICS.PULL_REQUESTS}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
+  totalPullRequests: `round(sum(increase(${METRICS.PULL_REQUESTS}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])))`,
 
   /** Pull requests by device */
-  pullRequestsByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.PULL_REQUESTS}{${ENV_FILTERS}}[$__range]))`,
+  pullRequestsByDevice: `round(sum by (${LABELS.DEVICE}) (increase(${METRICS.PULL_REQUESTS}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range])))`,
 
   /** Pull requests over time */
-  pullRequestsOverTime: `sum(increase(${METRICS.PULL_REQUESTS}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]))`,
+  pullRequestsOverTime: `round(sum(increase(${METRICS.PULL_REQUESTS}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval])) or vector(0))`,
 
   // ==================== ACTIVITY QUERIES ====================
 
@@ -94,7 +115,7 @@ export const QUERIES = {
   totalActiveTime: `sum(increase(${METRICS.ACTIVE_TIME}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
 
   /** Active time by device */
-  activeTimeByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.ACTIVE_TIME}{${ENV_FILTERS}}[$__range]))`,
+  activeTimeByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.ACTIVE_TIME}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range]))`,
 
   /** Active time over time */
   activeTimeOverTime: `sum(increase(${METRICS.ACTIVE_TIME}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]))`,
@@ -108,7 +129,7 @@ export const QUERIES = {
   toolDecisionsByTool: `sum by (${LABELS.TOOL}) (increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
 
   /** Tool acceptance rate */
-  toolAcceptanceRate: `sum(increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.DECISION}="accept", ${ENV_FILTERS}}[$__range])) / sum(increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])) * 100`,
+  toolAcceptanceRate: `(sum(increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.DECISION}="accept", ${ENV_FILTERS}}[$__range])) or vector(0)) / clamp_min(sum(increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])) or vector(0), 1) * 100`,
 
   // ==================== LANGUAGE QUERIES ====================
 
@@ -119,13 +140,22 @@ export const QUERIES = {
   toolDecisionsByLanguageOverTime: `sum(increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__rate_interval])) by (${LABELS.LANGUAGE})`,
 
   /** Tool decisions by language and device */
-  toolDecisionsByLanguageAndDevice: `sum by (${LABELS.LANGUAGE}, ${LABELS.DEVICE}) (increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__range]))`,
+  toolDecisionsByLanguageAndDevice: `sum by (${LABELS.LANGUAGE}, ${LABELS.DEVICE}) (increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!="", ${LABELS.DEVICE}!=""}[$__range]))`,
 
   /** Language acceptance rate */
-  languageAcceptanceRate: `sum by (${LABELS.LANGUAGE}) (increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.DECISION}="accept", ${LABELS.LANGUAGE}!=""}[$__range])) / sum by (${LABELS.LANGUAGE}) (increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__range])) * 100`,
+  languageAcceptanceRate: `((sum by (${LABELS.LANGUAGE}) (increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.DECISION}="accept", ${LABELS.LANGUAGE}!=""}[$__range]))) or (sum by (${LABELS.LANGUAGE}) (increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__range])) * 0)) / clamp_min(sum by (${LABELS.LANGUAGE}) (increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__range])), 1) * 100`,
 
   /** Total unique languages */
   totalLanguages: `count(count by (${LABELS.LANGUAGE}) (increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__range]) > 0))`,
+
+  /** Total edits across all languages */
+  totalLanguageEdits: `sum(increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__range]))`,
+
+  /** Overall acceptance rate across all languages */
+  overallLanguageAcceptanceRate: `(sum(increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.DECISION}="accept", ${LABELS.LANGUAGE}!=""}[$__range])) or vector(0)) / clamp_min(sum(increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__range])) or vector(0), 1) * 100`,
+
+  /** Tool decisions by language and team member */
+  toolDecisionsByLanguageAndMember: `sum by (${LABELS.LANGUAGE}, ${LABELS.USER_EMAIL}) (increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.LANGUAGE}!=""}[$__range]))`,
 
   // ==================== ENHANCED TOOL QUERIES ====================
 
@@ -164,7 +194,7 @@ export const QUERIES = {
   costByTerminalType: `sum by (${LABELS.TERMINAL_TYPE}) (increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range]))`,
 
   /** Sessions by terminal type */
-  sessionsByTerminalType: `count by (${LABELS.TERMINAL_TYPE}) (count by (${LABELS.SESSION_ID}, ${LABELS.TERMINAL_TYPE}) (increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) > 0))`,
+  sessionsByTerminalType: `round(sum by (${LABELS.TERMINAL_TYPE}) (increase(${METRICS.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])))`,
 
   /** Members by OS type */
   membersByOsType: `count by (${LABELS.OS_TYPE}) (count by (${LABELS.USER_EMAIL}, ${LABELS.OS_TYPE}) (increase(${METRICS.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) > 0))`,

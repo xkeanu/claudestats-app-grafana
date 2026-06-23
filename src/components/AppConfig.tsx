@@ -21,6 +21,7 @@ import {
 } from '@grafana/ui';
 import { css } from '@emotion/css';
 import { ClaudeStatsSettings } from '../types';
+import { PLUGIN_BASE_URL } from '../constants';
 
 export interface AppConfigProps extends PluginConfigPageProps<AppPluginMeta<ClaudeStatsSettings>> {}
 
@@ -112,7 +113,7 @@ export OTEL_METRIC_EXPORT_INTERVAL=60000
         ) : (
           <>
             <Alert title="Plugin is enabled" severity="success">
-              Claude Code Stats is active. Visit the <a href="/a/timurdigital-claudestats-app">Overview page</a> to see your team&apos;s usage.
+              Claude Code Stats is active. Visit the <a href={PLUGIN_BASE_URL}>Overview page</a> to see your team&apos;s usage.
             </Alert>
             <div className={styles.buttonRow}>
               <Button variant="destructive" onClick={onDisable}>

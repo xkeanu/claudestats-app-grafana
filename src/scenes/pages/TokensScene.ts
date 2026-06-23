@@ -59,7 +59,7 @@ export function getTokensScene(
     queries: [
       {
         refId: 'CacheReadTokens',
-        expr: `sum(increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${LABELS.TOKEN_TYPE}="cache_read", ${ENV_FILTERS}}[$__range]))`,
+        expr: `sum(increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${LABELS.TOKEN_TYPE}="cacheRead", ${ENV_FILTERS}}[$__range]))`,
       },
     ],
   });

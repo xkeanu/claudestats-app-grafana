@@ -96,6 +96,7 @@ export function getProductivityScene(
       {
         refId: 'CommitsOverTime',
         expr: QUERIES.commitsOverTime,
+        legendFormat: 'Commits',
       },
     ],
   });
@@ -106,6 +107,7 @@ export function getProductivityScene(
       {
         refId: 'PullRequestsOverTime',
         expr: QUERIES.pullRequestsOverTime,
+        legendFormat: 'Pull Requests',
       },
     ],
   });

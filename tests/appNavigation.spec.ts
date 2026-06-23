@@ -32,6 +32,12 @@ test.describe('App Navigation', () => {
     await expect(page).toHaveURL(/.*\/productivity/);
   });
 
+  test('should navigate to Sessions tab', async ({ gotoPage, page }) => {
+    await gotoPage();
+    await page.getByRole('tab', { name: 'Sessions' }).click();
+    await expect(page).toHaveURL(/.*\/sessions/);
+  });
+
   test('should display time range picker', async ({ gotoPage, page }) => {
     await gotoPage();
     await expect(page.getByTestId('data-testid TimePicker Open Button')).toBeVisible();

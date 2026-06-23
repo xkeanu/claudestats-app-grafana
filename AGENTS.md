@@ -54,6 +54,7 @@ src/
 │       ├── TokensScene.ts     # Token usage scene
 │       ├── ToolsScene.ts      # Tool usage scene
 │       ├── ProductivityScene.ts # Productivity metrics scene
+│       ├── SessionsScene.ts     # Session analytics scene
 │       ├── LanguagesScene.ts    # Language analytics scene
 │       └── EnvironmentScene.ts  # Environment analytics scene
 ├── types.ts                 # TypeScript types
@@ -71,8 +72,9 @@ src/
 3. **Tokens** - Token usage by type (input/output/cacheRead/cacheCreation), model distribution, usage over time
 4. **Tools** - Tool acceptance rate, tool decisions (accept/reject), usage by tool name, decisions over time
 5. **Productivity** - Lines of code (added/removed), commits, pull requests, active time by team member
-6. **Languages** - Programming language distribution from code edits, language usage trends over time, acceptance rate by language, language usage by team member
-7. **Environment** - OS distribution, architecture, IDE/terminal usage, Claude Code version adoption, device breakdown, cost breakdown by IDE and OS, usage trends over time
+6. **Sessions** - Session count, per-session averages, session trends, intensity, and device/model breakdowns
+7. **Languages** - Programming language distribution from code-edit tool decisions, language usage trends over time, acceptance rate by language, language usage by team member/device
+8. **Environment** - OS distribution, architecture, IDE/terminal usage, Claude Code version adoption, device breakdown, cost breakdown by IDE and OS, usage trends over time
 
 ### Configuration Page
 

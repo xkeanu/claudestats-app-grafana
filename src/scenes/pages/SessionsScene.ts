@@ -76,6 +76,7 @@ export function getSessionsScene(
       {
         refId: 'SessionIntensityOverTime',
         expr: QUERIES.sessionIntensityOverTime,
+        legendFormat: 'Tokens / Session',
       },
     ],
   });
@@ -108,6 +109,7 @@ export function getSessionsScene(
       {
         refId: 'ActiveUsersOverTime',
         expr: QUERIES.activeUsersOverTime,
+        legendFormat: 'Active Users',
       },
     ],
   });
