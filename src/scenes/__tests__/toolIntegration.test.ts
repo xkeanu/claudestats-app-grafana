@@ -114,6 +114,49 @@ describe('coding tool integration contracts', () => {
     expect(QUERIES.codexUsageByAppVersion).toContain(LABELS.CODEX_APP_VERSION);
   });
 
+  it('gates Codex contributions behind Claude-only shared filters', () => {
+    const expectedCodexSharedFilterPrefix = `${LABELS.JOB}=~"\${coding_tool:raw}", ${LABELS.USER_EMAIL}=~"$member", ${LABELS.TERMINAL_TYPE}=~"\${terminal_type:regex}", ${LABELS.OS_TYPE}=~"\${os_type:regex}", ${LABELS.DEVICE}=~"\${device:regex}"`;
+
+    for (const query of [
+      QUERIES.totalTokens,
+      QUERIES.inputTokens,
+      QUERIES.outputTokens,
+      QUERIES.cacheReadTokens,
+      QUERIES.tokensByType,
+      QUERIES.tokensByModel,
+      QUERIES.tokensOverTime,
+      QUERIES.totalSessions,
+      QUERIES.avgTokensPerSession,
+      QUERIES.sessionsByModel,
+      QUERIES.toolDecisions,
+      QUERIES.toolDecisionsByTool,
+      QUERIES.toolAcceptanceRate,
+      QUERIES.toolDecisionsOverTime,
+    ]) {
+      expect(query).toContain(`{${expectedCodexSharedFilterPrefix}`);
+    }
+  });
+
+  it('applies Codex-specific filters to guardian review queries', () => {
+    const codexSpecificFilters = [
+      `${LABELS.MODEL}=~"\${model:regex}"`,
+      `${LABELS.CODEX_ORIGINATOR}=~"\${codex_originator:regex}"`,
+      `${LABELS.CODEX_SESSION_SOURCE}=~"\${codex_session_source:regex}"`,
+      `${LABELS.CODEX_OS}=~"\${codex_os:regex}"`,
+    ];
+
+    for (const query of [
+      QUERIES.codexApprovalRate,
+      QUERIES.toolDecisions,
+      QUERIES.toolAcceptanceRate,
+      QUERIES.toolDecisionsOverTime,
+    ]) {
+      for (const labelFilter of codexSpecificFilters) {
+        expect(query).toContain(labelFilter);
+      }
+    }
+  });
+
   it('exposes the Codex route for navigation', () => {
     expect(ROUTES.Codex).toBe('codex');
   });
