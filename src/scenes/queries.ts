@@ -5,8 +5,11 @@ import { METRICS, LABELS } from '../constants';
  * use a separate filter below instead of forcing every exporter into one shape.
  */
 export const ENV_FILTERS = `${LABELS.JOB}=~"\${coding_tool:raw}", ${LABELS.TERMINAL_TYPE}=~"\${terminal_type:regex}", ${LABELS.OS_TYPE}=~"\${os_type:regex}", ${LABELS.DEVICE}=~"\${device:regex}"`;
-const CODEX_CONTEXT_FILTER = `${LABELS.JOB}=~"\${coding_tool:raw}", ${LABELS.MODEL}=~"\${model:regex}", ${LABELS.CODEX_ORIGINATOR}=~"\${codex_originator:regex}", ${LABELS.CODEX_SESSION_SOURCE}=~"\${codex_session_source:regex}", ${LABELS.CODEX_OS}=~"\${codex_os:regex}"`;
-const CODEX_BASE_FILTER = `${LABELS.JOB}=~"\${coding_tool:raw}"`;
+// Codex does not currently emit user_email, terminal_type, os_type, or device.
+// The "All" value (.*) still matches missing labels, while narrowed filters
+// exclude unlabeled Codex series so scoped Claude views do not include global Codex data.
+const CODEX_SHARED_FILTER = `${LABELS.JOB}=~"\${coding_tool:raw}", ${LABELS.USER_EMAIL}=~"$member", ${LABELS.TERMINAL_TYPE}=~"\${terminal_type:regex}", ${LABELS.OS_TYPE}=~"\${os_type:regex}", ${LABELS.DEVICE}=~"\${device:regex}"`;
+const CODEX_CONTEXT_FILTER = `${CODEX_SHARED_FILTER}, ${LABELS.MODEL}=~"\${model:regex}", ${LABELS.CODEX_ORIGINATOR}=~"\${codex_originator:regex}", ${LABELS.CODEX_SESSION_SOURCE}=~"\${codex_session_source:regex}", ${LABELS.CODEX_OS}=~"\${codex_os:regex}"`;
 
 /**
  * PromQL query builders for Claude Code and Codex metrics
@@ -138,16 +141,16 @@ export const QUERIES = {
 
   /** Tool decisions (accepted, rejected). Codex contributes its guardian
    * auto-review decisions: approved -> accept, denied -> reject. */
-  toolDecisions: `sum by (${LABELS.DECISION}) (increase(${METRICS.CLAUDE_CODE.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) or label_replace(increase(${METRICS.CODEX.GUARDIAN_REVIEW}{${CODEX_BASE_FILTER}, ${LABELS.CODEX_DECISION}="approved"}[$__range]), "${LABELS.DECISION}", "accept", "__name__", ".*") or label_replace(increase(${METRICS.CODEX.GUARDIAN_REVIEW}{${CODEX_BASE_FILTER}, ${LABELS.CODEX_DECISION}="denied"}[$__range]), "${LABELS.DECISION}", "reject", "__name__", ".*"))`,
+  toolDecisions: `sum by (${LABELS.DECISION}) (increase(${METRICS.CLAUDE_CODE.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) or label_replace(increase(${METRICS.CODEX.GUARDIAN_REVIEW}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_DECISION}="approved"}[$__range]), "${LABELS.DECISION}", "accept", "__name__", ".*") or label_replace(increase(${METRICS.CODEX.GUARDIAN_REVIEW}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_DECISION}="denied"}[$__range]), "${LABELS.DECISION}", "reject", "__name__", ".*"))`,
 
   /** Tool decisions by tool */
   toolDecisionsByTool: `sum by (${LABELS.TOOL}) (increase(${METRICS.CLAUDE_CODE.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) or label_replace(increase(${METRICS.CODEX.TOOL_CALL}{${CODEX_CONTEXT_FILTER}}[$__range]), "${LABELS.TOOL}", "$1", "${LABELS.CODEX_TOOL}", "(.*)"))`,
 
   /** Tool acceptance rate. Codex contributes guardian approved / all reviews. */
-  toolAcceptanceRate: `((sum(increase(${METRICS.CLAUDE_CODE.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.DECISION}="accept", ${ENV_FILTERS}}[$__range])) or vector(0)) + (sum(increase(${METRICS.CODEX.GUARDIAN_REVIEW}{${CODEX_BASE_FILTER}, ${LABELS.CODEX_DECISION}="approved"}[$__range])) or vector(0))) / clamp_min((sum(increase(${METRICS.CLAUDE_CODE.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])) or vector(0)) + (sum(increase(${METRICS.CODEX.GUARDIAN_REVIEW}{${CODEX_BASE_FILTER}}[$__range])) or vector(0)), 1) * 100`,
+  toolAcceptanceRate: `((sum(increase(${METRICS.CLAUDE_CODE.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.DECISION}="accept", ${ENV_FILTERS}}[$__range])) or vector(0)) + (sum(increase(${METRICS.CODEX.GUARDIAN_REVIEW}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_DECISION}="approved"}[$__range])) or vector(0))) / clamp_min((sum(increase(${METRICS.CLAUDE_CODE.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])) or vector(0)) + (sum(increase(${METRICS.CODEX.GUARDIAN_REVIEW}{${CODEX_CONTEXT_FILTER}}[$__range])) or vector(0)), 1) * 100`,
 
   /** Tool decisions over time. Codex guardian: approved -> accept, denied -> reject. */
-  toolDecisionsOverTime: `sum by (${LABELS.DECISION}) (increase(${METRICS.CLAUDE_CODE.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]) or label_replace(increase(${METRICS.CODEX.GUARDIAN_REVIEW}{${CODEX_BASE_FILTER}, ${LABELS.CODEX_DECISION}="approved"}[$__rate_interval]), "${LABELS.DECISION}", "accept", "__name__", ".*") or label_replace(increase(${METRICS.CODEX.GUARDIAN_REVIEW}{${CODEX_BASE_FILTER}, ${LABELS.CODEX_DECISION}="denied"}[$__rate_interval]), "${LABELS.DECISION}", "reject", "__name__", ".*"))`,
+  toolDecisionsOverTime: `sum by (${LABELS.DECISION}) (increase(${METRICS.CLAUDE_CODE.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]) or label_replace(increase(${METRICS.CODEX.GUARDIAN_REVIEW}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_DECISION}="approved"}[$__rate_interval]), "${LABELS.DECISION}", "accept", "__name__", ".*") or label_replace(increase(${METRICS.CODEX.GUARDIAN_REVIEW}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_DECISION}="denied"}[$__rate_interval]), "${LABELS.DECISION}", "reject", "__name__", ".*"))`,
 
   // ==================== LANGUAGE QUERIES ====================
 
@@ -269,7 +272,7 @@ export const QUERIES = {
   codexToolCallsByTool: `sum by (${LABELS.CODEX_TOOL}) (increase(${METRICS.CODEX.TOOL_CALL}{${CODEX_CONTEXT_FILTER}}[$__range]))`,
 
   /** Codex guardian auto-review approval rate (approved / all reviews) */
-  codexApprovalRate: `(sum(increase(${METRICS.CODEX.GUARDIAN_REVIEW}{${CODEX_BASE_FILTER}, ${LABELS.CODEX_DECISION}="approved"}[$__range])) or vector(0)) / clamp_min(sum(increase(${METRICS.CODEX.GUARDIAN_REVIEW}{${CODEX_BASE_FILTER}}[$__range])) or vector(0), 1) * 100`,
+  codexApprovalRate: `(sum(increase(${METRICS.CODEX.GUARDIAN_REVIEW}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_DECISION}="approved"}[$__range])) or vector(0)) / clamp_min(sum(increase(${METRICS.CODEX.GUARDIAN_REVIEW}{${CODEX_CONTEXT_FILTER}}[$__range])) or vector(0), 1) * 100`,
 
   /** Codex tool-call success rate (successful tool calls / all tool calls) */
   codexToolSuccessRate: `(sum(increase(${METRICS.CODEX.TOOL_CALL}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_SUCCESS}="true"}[$__range])) or vector(0)) / clamp_min(sum(increase(${METRICS.CODEX.TOOL_CALL}{${CODEX_CONTEXT_FILTER}}[$__range])) or vector(0), 1) * 100`,
