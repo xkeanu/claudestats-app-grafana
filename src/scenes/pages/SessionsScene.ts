@@ -133,7 +133,7 @@ export function getSessionsScene(
           children: [
             new SceneFlexItem({
               body: PanelBuilders.stat()
-                .setTitle('Total Sessions')
+                .setTitle('Sessions / Turns')
                 .setUnit('short')
                 .setData(totalSessionsQuery)
                 .setOption('graphMode', BigValueGraphMode.Area)
@@ -151,7 +151,7 @@ export function getSessionsScene(
             }),
             new SceneFlexItem({
               body: PanelBuilders.stat()
-                .setTitle('Avg Duration / Session')
+                .setTitle('Claude Avg Duration / Session')
                 .setUnit('s')
                 .setData(avgActiveTimePerSessionQuery)
                 .setOption('graphMode', BigValueGraphMode.None)
@@ -160,7 +160,7 @@ export function getSessionsScene(
             }),
             new SceneFlexItem({
               body: PanelBuilders.stat()
-                .setTitle('Avg Cost / Session')
+                .setTitle('Claude Avg Cost / Session')
                 .setUnit('currencyUSD')
                 .setData(avgCostPerSessionQuery)
                 .setOption('graphMode', BigValueGraphMode.None)
@@ -177,7 +177,7 @@ export function getSessionsScene(
             new SceneFlexItem({
               width: '60%',
               body: PanelBuilders.timeseries()
-                .setTitle('Sessions Over Time')
+                .setTitle('Claude Sessions Over Time')
                 .setUnit('short')
                 .setData(sessionsOverTimeQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
@@ -207,7 +207,7 @@ export function getSessionsScene(
             new SceneFlexItem({
               width: '40%',
               body: PanelBuilders.piechart()
-                .setTitle('Sessions by Device')
+                .setTitle('Claude Sessions by Device')
                 .setUnit('short')
                 .setData(sessionsByDeviceQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
@@ -226,7 +226,7 @@ export function getSessionsScene(
             new SceneFlexItem({
               width: '30%',
               body: PanelBuilders.timeseries()
-                .setTitle('Active Users Over Time')
+                .setTitle('Claude Active Users Over Time')
                 .setUnit('short')
                 .setData(activeUsersOverTimeQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })

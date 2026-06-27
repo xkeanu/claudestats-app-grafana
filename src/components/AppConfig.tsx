@@ -113,7 +113,7 @@ export OTEL_METRIC_EXPORT_INTERVAL=60000
         ) : (
           <>
             <Alert title="Plugin is enabled" severity="success">
-              Claude Code Stats is active. Visit the <a href={PLUGIN_BASE_URL}>Overview page</a> to see your team&apos;s usage.
+              Coding Tool Stats is active. Visit the <a href={PLUGIN_BASE_URL}>Overview page</a> to see your team&apos;s usage.
             </Alert>
             <div className={styles.buttonRow}>
               <Button variant="destructive" onClick={onDisable}>
@@ -142,7 +142,7 @@ export OTEL_METRIC_EXPORT_INTERVAL=60000
             {activeTab === 'setup' && (
               <VerticalGroup spacing="lg">
                 <Alert title="Quick Start" severity="info">
-                  Configure Claude Code to send telemetry to Grafana Cloud in 4 steps.
+                  Configure Claude Code telemetry for Grafana Cloud in 4 steps, then add Codex telemetry if you want to compare tools.
                 </Alert>
 
                 <Card>
@@ -216,6 +216,34 @@ claude`}
                       readOnly
                       showMiniMap={false}
                     />
+                  </Card.Description>
+                </Card>
+
+                <Card>
+                  <Card.Heading>Step 5: Optional Codex Telemetry</Card.Heading>
+                  <Card.Description>
+                    <VerticalGroup spacing="md">
+                      <p>
+                        Codex supports OTLP exporters over HTTP and gRPC. Set up Codex telemetry separately from Claude Code,
+                        because Codex OpenTelemetry uses a different schema.
+                      </p>
+                      <CodeEditor
+                        value={`# ~/.codex/config.toml
+[otel]
+environment = "dev"
+metrics_exporter = "otlp-http" # or "otlp-grpc"`}
+                        language="toml"
+                        height={120}
+                        readOnly
+                        showMiniMap={false}
+                      />
+                      <p>
+                        Configure the OTLP endpoint and headers in Codex&apos;s OTel exporter settings for your collector or Grafana
+                        Cloud endpoint.{' '}
+                        Cost, lines of code, commit, and pull request panels remain Claude Code-only unless you normalize or derive
+                        equivalent metrics upstream.
+                      </p>
+                    </VerticalGroup>
                   </Card.Description>
                 </Card>
 
@@ -318,6 +346,12 @@ claude_code_code_edit_tool_decision_total`}
                       readOnly
                       showMiniMap={false}
                     />
+                    <p>
+                      Codex exports a different OpenTelemetry schema. Use Codex metrics for Codex-specific analysis and Claude Code
+                      metrics for the Claude Code-only panels in this app. In the live Codex schema checked for this app, team-member
+                      and device filters require upstream label normalization because Codex does not emit <code>user_email</code> or
+                      <code>device</code>.
+                    </p>
                   </Card.Description>
                 </Card>
 
