@@ -13,7 +13,7 @@ import {
 } from '@grafana/scenes';
 import { LegendDisplayMode, StackingMode } from '@grafana/schema';
 import { QUERIES } from '../queries';
-import { PANEL_HEIGHTS } from '../../constants';
+import { LABELS, PANEL_HEIGHTS } from '../../constants';
 
 export function getEnvironmentScene(
   timeRange: SceneTimeRange,
@@ -129,6 +129,72 @@ export function getEnvironmentScene(
     ],
   });
 
+  const codexUsageByOsQuery = new SceneQueryRunner({
+    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
+    queries: [
+      {
+        refId: 'CodexUsageByOs',
+        expr: QUERIES.codexUsageByOs,
+        legendFormat: `{{${LABELS.CODEX_OS}}}`,
+      },
+    ],
+  });
+
+  const codexUsageByOriginatorQuery = new SceneQueryRunner({
+    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
+    queries: [
+      {
+        refId: 'CodexUsageByOriginator',
+        expr: QUERIES.codexUsageByOriginator,
+        legendFormat: `{{${LABELS.CODEX_ORIGINATOR}}}`,
+      },
+    ],
+  });
+
+  const codexUsageBySessionSourceQuery = new SceneQueryRunner({
+    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
+    queries: [
+      {
+        refId: 'CodexUsageBySessionSource',
+        expr: QUERIES.codexUsageBySessionSource,
+        legendFormat: `{{${LABELS.CODEX_SESSION_SOURCE}}}`,
+      },
+    ],
+  });
+
+  const codexUsageByAppVersionQuery = new SceneQueryRunner({
+    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
+    queries: [
+      {
+        refId: 'CodexUsageByAppVersion',
+        expr: QUERIES.codexUsageByAppVersion,
+        legendFormat: `{{${LABELS.CODEX_APP_VERSION}}}`,
+      },
+    ],
+  });
+
+  const codexOriginatorOverTimeQuery = new SceneQueryRunner({
+    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
+    queries: [
+      {
+        refId: 'CodexOriginatorOverTime',
+        expr: QUERIES.codexOriginatorOverTime,
+        legendFormat: `{{${LABELS.CODEX_ORIGINATOR}}}`,
+      },
+    ],
+  });
+
+  const codexVersionOverTimeQuery = new SceneQueryRunner({
+    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
+    queries: [
+      {
+        refId: 'CodexVersionOverTime',
+        expr: QUERIES.codexVersionOverTime,
+        legendFormat: `{{${LABELS.CODEX_APP_VERSION}}}`,
+      },
+    ],
+  });
+
   return new EmbeddedScene({
     $timeRange: timeRange,
     $variables: variables,
@@ -149,7 +215,7 @@ export function getEnvironmentScene(
             new SceneFlexItem({
               width: '25%',
               body: PanelBuilders.piechart()
-                .setTitle('OS Distribution')
+                .setTitle('Claude OS Distribution')
                 .setData(usageByOsTypeQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .setOption('pieType', 'donut' as never)
@@ -158,7 +224,7 @@ export function getEnvironmentScene(
             new SceneFlexItem({
               width: '25%',
               body: PanelBuilders.piechart()
-                .setTitle('Architecture')
+                .setTitle('Claude Architecture')
                 .setData(usageByHostArchQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .setOption('pieType', 'donut' as never)
@@ -167,7 +233,7 @@ export function getEnvironmentScene(
             new SceneFlexItem({
               width: '25%',
               body: PanelBuilders.piechart()
-                .setTitle('IDE / Terminal')
+                .setTitle('Claude IDE / Terminal')
                 .setData(usageByTerminalTypeQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .setOption('pieType', 'donut' as never)
@@ -184,6 +250,49 @@ export function getEnvironmentScene(
             }),
           ],
         }),
+        // Row 2: Codex environment dimensions
+        new SceneFlexLayout({
+          direction: 'row',
+          height: PANEL_HEIGHTS.MEDIUM,
+          children: [
+            new SceneFlexItem({
+              width: '25%',
+              body: PanelBuilders.piechart()
+                .setTitle('Codex OS')
+                .setData(codexUsageByOsQuery)
+                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+                .setOption('pieType', 'donut' as never)
+                .build(),
+            }),
+            new SceneFlexItem({
+              width: '25%',
+              body: PanelBuilders.piechart()
+                .setTitle('Codex Originator')
+                .setData(codexUsageByOriginatorQuery)
+                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+                .setOption('pieType', 'donut' as never)
+                .build(),
+            }),
+            new SceneFlexItem({
+              width: '25%',
+              body: PanelBuilders.piechart()
+                .setTitle('Codex Source')
+                .setData(codexUsageBySessionSourceQuery)
+                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+                .setOption('pieType', 'donut' as never)
+                .build(),
+            }),
+            new SceneFlexItem({
+              width: '25%',
+              body: PanelBuilders.piechart()
+                .setTitle('Codex App Version')
+                .setData(codexUsageByAppVersionQuery)
+                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+                .setOption('pieType', 'donut' as never)
+                .build(),
+            }),
+          ],
+        }),
         // Row 2: Device breakdown (requires OTEL_RESOURCE_ATTRIBUTES="device=...")
         new SceneFlexLayout({
           direction: 'row',
@@ -192,7 +301,7 @@ export function getEnvironmentScene(
             new SceneFlexItem({
               width: '50%',
               body: PanelBuilders.piechart()
-                .setTitle('Usage by Device')
+                .setTitle('Claude Usage by Device')
                 .setData(usageByDeviceQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
                 .setOption('pieType', 'donut' as never)
@@ -201,7 +310,7 @@ export function getEnvironmentScene(
             new SceneFlexItem({
               width: '50%',
               body: PanelBuilders.piechart()
-                .setTitle('Cost by Device')
+                .setTitle('Claude Cost by Device')
                 .setUnit('currencyUSD')
                 .setData(costByDeviceQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
@@ -217,7 +326,7 @@ export function getEnvironmentScene(
             new SceneFlexItem({
               width: '50%',
               body: PanelBuilders.piechart()
-                .setTitle('Cost by IDE / Terminal')
+                .setTitle('Claude Cost by IDE / Terminal')
                 .setUnit('currencyUSD')
                 .setData(costByTerminalTypeQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
@@ -226,7 +335,7 @@ export function getEnvironmentScene(
             new SceneFlexItem({
               width: '50%',
               body: PanelBuilders.piechart()
-                .setTitle('Cost by OS')
+                .setTitle('Claude Cost by OS')
                 .setUnit('currencyUSD')
                 .setData(costByOsTypeQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
@@ -234,7 +343,7 @@ export function getEnvironmentScene(
             }),
           ],
         }),
-        // Row 4: Trends over time
+        // Row 4: Claude trends over time
         new SceneFlexLayout({
           direction: 'row',
           height: PANEL_HEIGHTS.LARGE,
@@ -242,7 +351,7 @@ export function getEnvironmentScene(
             new SceneFlexItem({
               width: '50%',
               body: PanelBuilders.timeseries()
-                .setTitle('IDE / Terminal Usage Over Time')
+                .setTitle('Claude IDE / Terminal Over Time')
                 .setUnit('short')
                 .setData(terminalTypeOverTimeQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
@@ -253,9 +362,38 @@ export function getEnvironmentScene(
             new SceneFlexItem({
               width: '50%',
               body: PanelBuilders.timeseries()
-                .setTitle('Version Adoption Over Time')
+                .setTitle('Claude Version Adoption Over Time')
                 .setUnit('short')
                 .setData(versionAdoptionOverTimeQuery)
+                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+                .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
+                .setCustomFieldConfig('fillOpacity', 20)
+                .build(),
+            }),
+          ],
+        }),
+        // Row 5: Codex trends over time
+        new SceneFlexLayout({
+          direction: 'row',
+          height: PANEL_HEIGHTS.LARGE,
+          children: [
+            new SceneFlexItem({
+              width: '50%',
+              body: PanelBuilders.timeseries()
+                .setTitle('Codex Originator Over Time')
+                .setUnit('short')
+                .setData(codexOriginatorOverTimeQuery)
+                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+                .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
+                .setCustomFieldConfig('fillOpacity', 20)
+                .build(),
+            }),
+            new SceneFlexItem({
+              width: '50%',
+              body: PanelBuilders.timeseries()
+                .setTitle('Codex Version Over Time')
+                .setUnit('short')
+                .setData(codexVersionOverTimeQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 20)

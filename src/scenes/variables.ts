@@ -1,9 +1,10 @@
 import {
   QueryVariable,
   DataSourceVariable,
+  CustomVariable,
   SceneVariableSet,
 } from '@grafana/scenes';
-import { METRICS, LABELS } from '../constants';
+import { METRICS, LABELS, CODING_TOOLS } from '../constants';
 
 /**
  * Creates a data source variable for Prometheus/Mimir
@@ -50,7 +51,7 @@ export function getModelVariable() {
       uid: '${prometheus_ds}',
     },
     query: {
-      query: `label_values(${METRICS.COST_USAGE}, ${LABELS.MODEL})`,
+      query: `label_values({__name__=~"${METRICS.CLAUDE_CODE.COST_USAGE}|${METRICS.CLAUDE_CODE.TOKEN_USAGE}|${METRICS.CODEX.TURN_TOKEN_USAGE}|${METRICS.CODEX.API_REQUEST}|${METRICS.CODEX.TOOL_CALL}"}, ${LABELS.MODEL})`,
       refId: 'ModelQuery',
     },
     includeAll: true,
@@ -124,6 +125,83 @@ export function getDeviceVariable() {
 }
 
 /**
+ * Creates a coding tool selector for Claude Code and Codex
+ */
+export function getCodingToolVariable() {
+  return new CustomVariable({
+    name: 'coding_tool',
+    label: 'Coding Tool',
+    query: `Claude Code : ${CODING_TOOLS.CLAUDE_CODE}, Codex : ${CODING_TOOLS.CODEX}`,
+    includeAll: true,
+    defaultToAll: true,
+    allValue: '.*',
+  });
+}
+
+/**
+ * Creates a Codex originator filter variable (desktop, CLI, app server, etc.)
+ */
+export function getCodexOriginatorVariable() {
+  return new QueryVariable({
+    name: 'codex_originator',
+    label: 'Codex Originator',
+    datasource: {
+      type: 'prometheus',
+      uid: '${prometheus_ds}',
+    },
+    query: {
+      query: `label_values({__name__=~"${METRICS.CODEX.TURN_TOKEN_USAGE}|${METRICS.CODEX.API_REQUEST}|${METRICS.CODEX.TOOL_CALL}"}, ${LABELS.CODEX_ORIGINATOR})`,
+      refId: 'CodexOriginatorQuery',
+    },
+    includeAll: true,
+    defaultToAll: true,
+    allValue: '.*',
+  });
+}
+
+/**
+ * Creates a Codex session-source filter variable (CLI, VS Code, subagent, etc.)
+ */
+export function getCodexSessionSourceVariable() {
+  return new QueryVariable({
+    name: 'codex_session_source',
+    label: 'Codex Source',
+    datasource: {
+      type: 'prometheus',
+      uid: '${prometheus_ds}',
+    },
+    query: {
+      query: `label_values({__name__=~"${METRICS.CODEX.TURN_TOKEN_USAGE}|${METRICS.CODEX.API_REQUEST}|${METRICS.CODEX.TOOL_CALL}"}, ${LABELS.CODEX_SESSION_SOURCE})`,
+      refId: 'CodexSessionSourceQuery',
+    },
+    includeAll: true,
+    defaultToAll: true,
+    allValue: '.*',
+  });
+}
+
+/**
+ * Creates a Codex OS filter variable. Claude Code OS remains in os_type.
+ */
+export function getCodexOsVariable() {
+  return new QueryVariable({
+    name: 'codex_os',
+    label: 'Codex OS',
+    datasource: {
+      type: 'prometheus',
+      uid: '${prometheus_ds}',
+    },
+    query: {
+      query: `label_values({__name__=~"${METRICS.CODEX.TURN_TOKEN_USAGE}|${METRICS.CODEX.API_REQUEST}|${METRICS.CODEX.TOOL_CALL}"}, ${LABELS.CODEX_OS})`,
+      refId: 'CodexOsQuery',
+    },
+    includeAll: true,
+    defaultToAll: true,
+    allValue: '.*',
+  });
+}
+
+/**
  * Creates the shared variable set used across all scenes
  */
 export function getSharedVariables() {
@@ -132,9 +210,13 @@ export function getSharedVariables() {
       getPrometheusDataSourceVariable(),
       getTeamMemberVariable(),
       getModelVariable(),
+      getCodingToolVariable(),
       getTerminalTypeVariable(),
       getOsTypeVariable(),
       getDeviceVariable(),
+      getCodexOriginatorVariable(),
+      getCodexSessionSourceVariable(),
+      getCodexOsVariable(),
     ],
   });
 }

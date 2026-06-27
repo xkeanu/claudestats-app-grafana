@@ -11,6 +11,7 @@ import { getOverviewScene } from '../../scenes/pages/OverviewScene';
 import { getCostsScene } from '../../scenes/pages/CostsScene';
 import { getTokensScene } from '../../scenes/pages/TokensScene';
 import { getToolsScene } from '../../scenes/pages/ToolsScene';
+import { getCodexScene } from '../../scenes/pages/CodexScene';
 import { getProductivityScene } from '../../scenes/pages/ProductivityScene';
 import { getSessionsScene } from '../../scenes/pages/SessionsScene';
 import { getLanguagesScene } from '../../scenes/pages/LanguagesScene';
@@ -28,8 +29,8 @@ function getSceneApp() {
   return new SceneApp({
     pages: [
       new SceneAppPage({
-        title: 'Claude Code Stats',
-        subTitle: 'Team usage analytics for Claude Code',
+        title: 'Coding Tool Stats',
+        subTitle: 'Team usage analytics for Claude Code, Codex, and future coding tools',
         url: PLUGIN_BASE_URL,
         routePath: '*',
         getScene: () => getOverviewScene(timeRange, variables),
@@ -57,6 +58,12 @@ function getSceneApp() {
             url: prefixRoute(ROUTES.Tools),
             routePath: `/${ROUTES.Tools}`,
             getScene: () => getToolsScene(timeRange, variables),
+          }),
+          new SceneAppPage({
+            title: 'Codex',
+            url: prefixRoute(ROUTES.Codex),
+            routePath: `/${ROUTES.Codex}`,
+            getScene: () => getCodexScene(timeRange, variables),
           }),
           new SceneAppPage({
             title: 'Productivity',

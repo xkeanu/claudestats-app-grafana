@@ -123,7 +123,7 @@ export function getOverviewScene(
           children: [
             new SceneFlexItem({
               body: PanelBuilders.stat()
-                .setTitle('Total Cost')
+                .setTitle('Claude Cost')
                 .setUnit('currencyUSD')
                 .setData(totalCostQuery)
                 .setColor({ mode: 'thresholds' })
@@ -140,7 +140,7 @@ export function getOverviewScene(
             }),
             new SceneFlexItem({
               body: PanelBuilders.stat()
-                .setTitle('Sessions')
+                .setTitle('Sessions / Turns')
                 .setUnit('short')
                 .setData(totalSessionsQuery)
                 .setOption('graphMode', BigValueGraphMode.None)
@@ -148,7 +148,7 @@ export function getOverviewScene(
             }),
             new SceneFlexItem({
               body: PanelBuilders.stat()
-                .setTitle('Active Users')
+                .setTitle('Claude Active Users')
                 .setUnit('short')
                 .setData(activeUsersQuery)
                 .setOption('graphMode', BigValueGraphMode.None)
@@ -164,7 +164,7 @@ export function getOverviewScene(
             new SceneFlexItem({
               width: '60%',
               body: PanelBuilders.timeseries()
-                .setTitle('Cost Over Time')
+                .setTitle('Claude Cost Over Time')
                 .setUnit('currencyUSD')
                 .setData(costOverTimeQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
@@ -174,7 +174,7 @@ export function getOverviewScene(
             new SceneFlexItem({
               width: '40%',
               body: PanelBuilders.piechart()
-                .setTitle('Cost by Device')
+                .setTitle('Claude Cost by Device')
                 .setUnit('currencyUSD')
                 .setData(costByDeviceQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
@@ -201,7 +201,7 @@ export function getOverviewScene(
             new SceneFlexItem({
               width: '50%',
               body: PanelBuilders.timeseries()
-                .setTitle('Active Time Over Time')
+                .setTitle('Claude Active Time Over Time')
                 .setUnit('s')
                 .setData(activeTimeByTypeOverTimeQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })

@@ -40,5 +40,6 @@ test.describe('Configuration Page', () => {
     await expect(page.getByText('Metrics Reference')).toBeVisible();
     // Use first() to handle multiple matches in code editor
     await expect(page.getByText('claude_code_cost_usage_USD_total').first()).toBeVisible();
+    await expect(page.getByText('Codex exports a different OpenTelemetry schema.')).toBeVisible();
   });
 });

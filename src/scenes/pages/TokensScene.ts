@@ -17,8 +17,8 @@ import {
   LineInterpolation,
   StackingMode,
 } from '@grafana/schema';
-import { QUERIES, ENV_FILTERS } from '../queries';
-import { PANEL_HEIGHTS, LABELS, METRICS } from '../../constants';
+import { QUERIES } from '../queries';
+import { PANEL_HEIGHTS } from '../../constants';
 
 export function getTokensScene(
   timeRange: SceneTimeRange,
@@ -39,7 +39,7 @@ export function getTokensScene(
     queries: [
       {
         refId: 'InputTokens',
-        expr: `sum(increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${LABELS.TOKEN_TYPE}="input", ${ENV_FILTERS}}[$__range]))`,
+        expr: QUERIES.inputTokens,
       },
     ],
   });
@@ -49,7 +49,7 @@ export function getTokensScene(
     queries: [
       {
         refId: 'OutputTokens',
-        expr: `sum(increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${LABELS.TOKEN_TYPE}="output", ${ENV_FILTERS}}[$__range]))`,
+        expr: QUERIES.outputTokens,
       },
     ],
   });
@@ -59,7 +59,7 @@ export function getTokensScene(
     queries: [
       {
         refId: 'CacheReadTokens',
-        expr: `sum(increase(${METRICS.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${LABELS.TOKEN_TYPE}="cacheRead", ${ENV_FILTERS}}[$__range]))`,
+        expr: QUERIES.cacheReadTokens,
       },
     ],
   });
@@ -208,7 +208,7 @@ export function getTokensScene(
             new SceneFlexItem({
               width: '50%',
               body: PanelBuilders.piechart()
-                .setTitle('Tokens by Device')
+                .setTitle('Claude Tokens by Device')
                 .setUnit('short')
                 .setData(tokensByDeviceQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })

@@ -20,8 +20,8 @@ import {
   BarGaugeValueMode,
   VizOrientation,
 } from '@grafana/schema';
-import { QUERIES, ENV_FILTERS } from '../queries';
-import { PANEL_HEIGHTS, LABELS, METRICS } from '../../constants';
+import { QUERIES } from '../queries';
+import { PANEL_HEIGHTS } from '../../constants';
 
 export function getToolsScene(
   timeRange: SceneTimeRange,
@@ -64,7 +64,7 @@ export function getToolsScene(
     queries: [
       {
         refId: 'ToolDecisionsOverTime',
-        expr: `sum(increase(${METRICS.TOOL_DECISION}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval])) by (${LABELS.DECISION})`,
+        expr: QUERIES.toolDecisionsOverTime,
         legendFormat: '{{decision}}',
       },
     ],
@@ -187,7 +187,7 @@ export function getToolsScene(
             new SceneFlexItem({
               width: '40%',
               body: PanelBuilders.piechart()
-                .setTitle('Decisions by Source')
+                .setTitle('Claude Decisions by Source')
                 .setData(toolDecisionsBySourceQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
                 .build(),
@@ -195,7 +195,7 @@ export function getToolsScene(
             new SceneFlexItem({
               width: '60%',
               body: PanelBuilders.timeseries()
-                .setTitle('Decision Source Over Time')
+                .setTitle('Claude Decision Source Over Time')
                 .setUnit('short')
                 .setData(toolDecisionsBySourceOverTimeQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
@@ -212,7 +212,7 @@ export function getToolsScene(
           children: [
             new SceneFlexItem({
               body: PanelBuilders.piechart()
-                .setTitle('Tool Decisions by Language')
+                .setTitle('Claude Tool Decisions by Language')
                 .setData(toolDecisionsByLanguageQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
                 .build(),
