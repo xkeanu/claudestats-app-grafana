@@ -216,13 +216,22 @@ export function tablePanel(options: Omit<BasePanelOptions, 'quantity'> & { quant
  *
  * Stats show a single value, so the palette rules do not apply to them — they
  * keep their existing fixed or threshold colour, passed through here.
+ *
+ * `quantity` is optional only because a few stats display a string rather than
+ * a quantity (the Codex price-table provenance, for one), and a unit on those
+ * would be meaningless. Any stat showing a number must still name its quantity.
  */
-export function statPanel(options: BasePanelOptions & { color?: { mode: string; fixedColor?: string } }) {
-  const builder = PanelBuilders.stat()
-    .setTitle(options.title)
-    .setUnit(QUANTITY_UNITS[options.quantity])
-    .setData(options.data);
+export function statPanel(
+  options: Omit<BasePanelOptions, 'quantity'> & {
+    quantity?: Quantity;
+    color?: { mode: string; fixedColor?: string };
+  }
+) {
+  const builder = PanelBuilders.stat().setTitle(options.title).setData(options.data);
 
+  if (options.quantity) {
+    builder.setUnit(QUANTITY_UNITS[options.quantity]);
+  }
   if (options.color) {
     builder.setColor(options.color);
   }

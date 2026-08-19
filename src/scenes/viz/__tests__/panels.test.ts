@@ -187,4 +187,9 @@ describe('stat panels', () => {
     expect(panel.state.fieldConfig.defaults.unit).toBe('currencyUSD');
     expect(panel.state.fieldConfig.defaults.color?.mode).toBe('thresholds');
   });
+
+  it('sets no unit for a text-valued stat with no quantity', () => {
+    const panel = statPanel({ title: 'Price Table', data: query() }).build();
+    expect(panel.state.fieldConfig.defaults.unit).toBeUndefined();
+  });
 });

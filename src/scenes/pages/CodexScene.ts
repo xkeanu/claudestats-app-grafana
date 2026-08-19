@@ -9,11 +9,11 @@ import {
   SceneTimeRange,
   SceneVariableSet,
   VariableValueSelectors,
-  PanelBuilders,
   SceneDataTransformer,
 } from '@grafana/scenes';
-import { BigValueGraphMode, BigValueTextMode, LegendDisplayMode, LineInterpolation, StackingMode } from '@grafana/schema';
+import { BigValueGraphMode, BigValueTextMode, LineInterpolation, StackingMode } from '@grafana/schema';
 import { LABELS, PANEL_HEIGHTS } from '../../constants';
+import { barPanel, statPanel, timeseriesPanel } from '../viz/panels';
 import { QUERIES } from '../queries';
 import { makeCostTransformation } from '../../pricing/costTransformation';
 
@@ -113,53 +113,47 @@ export function getCodexScene(timeRange: SceneTimeRange, variables: SceneVariabl
           height: PANEL_HEIGHTS.STAT,
           children: [
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Codex Total Tokens')
-                .setUnit('short')
-                .setData(totalTokensQuery)
+              body: statPanel({ title: 'Codex Total Tokens', quantity: 'tokens', data: totalTokensQuery })
                 .setOption('graphMode', BigValueGraphMode.None)
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Codex API Requests')
-                .setUnit('short')
-                .setData(apiRequestsQuery)
+              body: statPanel({ title: 'Codex API Requests', quantity: 'count', data: apiRequestsQuery })
                 .setOption('graphMode', BigValueGraphMode.None)
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Avg Codex Turn Duration')
-                .setUnit('ms')
-                .setData(turnDurationQuery)
+              body: statPanel({ title: 'Avg Codex Turn Duration', quantity: 'durationMs', data: turnDurationQuery })
                 .setOption('graphMode', BigValueGraphMode.None)
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Guardian Approval Rate')
-                .setDescription('Codex auto-review (guardian) decisions: approved / all reviews. Only emitted by the desktop/app-server with auto-review enabled.')
-                .setUnit('percent')
-                .setData(approvalRateQuery)
+              body: statPanel({
+                title: 'Guardian Approval Rate',
+                description: 'Codex auto-review (guardian) decisions: approved / all reviews. Only emitted by the desktop/app-server with auto-review enabled.',
+                quantity: 'rate',
+                data: approvalRateQuery,
+              })
                 .setOption('graphMode', BigValueGraphMode.None)
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Tool Success Rate')
-                .setDescription('Successful Codex tool calls (success="true") / all tool calls.')
-                .setUnit('percent')
-                .setData(toolSuccessRateQuery)
+              body: statPanel({
+                title: 'Tool Success Rate',
+                description: 'Successful Codex tool calls (success="true") / all tool calls.',
+                quantity: 'rate',
+                data: toolSuccessRateQuery,
+              })
                 .setOption('graphMode', BigValueGraphMode.None)
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Conversation Turns')
-                .setDescription('Codex conversation turns (one per user turn). Distinct from sessions.')
-                .setUnit('short')
-                .setData(turnCountQuery)
+              body: statPanel({
+                title: 'Conversation Turns',
+                description: 'Codex conversation turns (one per user turn). Distinct from sessions.',
+                quantity: 'count',
+                data: turnCountQuery,
+              })
                 .setOption('graphMode', BigValueGraphMode.None)
                 .build(),
             }),
@@ -170,44 +164,45 @@ export function getCodexScene(timeRange: SceneTimeRange, variables: SceneVariabl
           height: PANEL_HEIGHTS.STAT,
           children: [
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Estimated Codex Cost')
-                .setDescription(
-                  `${ESTIMATE_NOTE} Cached input is charged at the cache-read rate; models absent from the price table contribute nothing and are counted under Unpriced Tokens.`
-                )
-                .setUnit('currencyUSD')
-                .setData(estimatedCostData)
-                .setOption('graphMode', BigValueGraphMode.None)
+              body: statPanel({
+                title: 'Estimated Codex Cost',
+                description: `${ESTIMATE_NOTE} Cached input is charged at the cache-read rate; models absent from the price table contribute nothing and are counted under Unpriced Tokens.`,
+                quantity: 'cost',
+                data: estimatedCostData,
                 // Fixed purple rather than the thresholds colouring the measured
                 // Claude cost stats use, so an estimate never reads as measured.
-                .setColor({ mode: 'fixed', fixedColor: 'purple' })
-                .build(),
-            }),
-            new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Unpriced Tokens')
-                .setDescription(
-                  'Billable Codex tokens belonging to models the price table cannot price (for example codex-auto-review, which is not an OpenAI catalogue model). These contribute nothing to the estimate, so a non-zero figure here means the estimate is understated.'
-                )
-                .setUnit('short')
-                .setData(unpricedTokensData)
+                color: { mode: 'fixed', fixedColor: 'purple' },
+              })
                 .setOption('graphMode', BigValueGraphMode.None)
-                .setColor({ mode: 'fixed', fixedColor: 'text' })
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Price Table')
-                .setDescription(
-                  'Which price table produced the estimate, and its as-of date. "Refresh failed" means live refresh is enabled but the feed could not be used, so the bundled table was substituted.'
-                )
-                .setData(priceProvenanceData)
+              body: statPanel({
+                title: 'Unpriced Tokens',
+                description:
+                  'Billable Codex tokens belonging to models the price table cannot price (for example codex-auto-review, which is not an OpenAI catalogue model). These contribute nothing to the estimate, so a non-zero figure here means the estimate is understated.',
+                quantity: 'tokens',
+                data: unpricedTokensData,
+                color: { mode: 'fixed', fixedColor: 'text' },
+              })
+                .setOption('graphMode', BigValueGraphMode.None)
+                .build(),
+            }),
+            new SceneFlexItem({
+              // No quantity: this stat displays a provenance string, not a
+              // number, so a unit would be meaningless.
+              body: statPanel({
+                title: 'Price Table',
+                description:
+                  'Which price table produced the estimate, and its as-of date. "Refresh failed" means live refresh is enabled but the feed could not be used, so the bundled table was substituted.',
+                data: priceProvenanceData,
+                color: { mode: 'fixed', fixedColor: 'text' },
+              })
                 .setOption('graphMode', BigValueGraphMode.None)
                 // A stat panel reduces numeric fields only by default, so a
                 // text-valued field renders as "No data" without this.
                 .setOption('reduceOptions', { calcs: ['lastNotNull'], fields: '/.*/', values: false })
                 .setOption('textMode', BigValueTextMode.Value)
-                .setColor({ mode: 'fixed', fixedColor: 'text' })
                 .build(),
             }),
           ],
@@ -218,27 +213,25 @@ export function getCodexScene(timeRange: SceneTimeRange, variables: SceneVariabl
           children: [
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Codex Tokens by Token Type')
-                .setUnit('short')
-                .setData(tokensByTypeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Not clustered: grouped by the bounded Codex `token_type`.
+              body: timeseriesPanel({
+                title: 'Codex Tokens by Token Type',
+                quantity: 'tokens',
+                data: tokensByTypeQuery,
+              })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
-                .setCustomFieldConfig('fillOpacity', 30)
                 .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.bargauge()
-                .setTitle('Codex Tool Calls by Tool')
-                .setUnit('short')
-                .setData(toolCallsByToolQuery)
-                .setOption('orientation', 'horizontal' as never)
-                .setOption('displayMode', 'gradient' as never)
-                .setOption('showUnfilled', true)
-                .setDisplayName('${__series.name}')
-                .build(),
+              // `tool` takes the contract's default bar limit.
+              body: barPanel({
+                title: 'Codex Tool Calls by Tool',
+                quantity: 'count',
+                data: toolCallsByToolQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
           ],
         }),
@@ -248,11 +241,12 @@ export function getCodexScene(timeRange: SceneTimeRange, variables: SceneVariabl
           children: [
             new SceneFlexItem({
               width: '100%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Codex API Requests and SSE Events')
-                .setUnit('short')
-                .setData(apiAndSseQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Not clustered: exactly two named series.
+              body: timeseriesPanel({
+                title: 'Codex API Requests and SSE Events',
+                quantity: 'count',
+                data: apiAndSseQuery,
+              })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 20)
                 .build(),
