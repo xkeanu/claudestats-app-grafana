@@ -1,4 +1,10 @@
-import { METRICS, LABELS, MODEL_FAMILIES, OTHER_FAMILY } from '../constants';
+import {
+  METRICS,
+  LABELS,
+  MODEL_FAMILIES,
+  OTHER_FAMILY,
+  CODEX_BILLABLE_TOKEN_TYPE_MATCHER,
+} from '../constants';
 
 /**
  * Wraps `inner` in a chained `label_replace` that synthesizes a `provider`
@@ -326,6 +332,23 @@ export const QUERIES = {
 
   /** Codex tokens by token type */
   codexTokensByType: `sum by (${LABELS.CODEX_TOKEN_TYPE}) (increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}!="total"}[$__range]))`,
+
+  /**
+   * Codex tokens grouped by BOTH `model` and `token_type` — the single input to
+   * the client-side cost estimate.
+   *
+   * The selector is restricted to the three billable token types rather than
+   * merely excluding `total`. `total` is the sum of `input` and `output`, and
+   * `reasoning_output` is a subset of `output`, so a plain `!="total"` would
+   * still double-count. Excluding here as well as in `estimateCost()` is
+   * deliberate belt-and-braces: it keeps the double-counting trap from being a
+   * single point of failure.
+   *
+   * Note `input` is GROSS and contains `cached_input`; the subtraction that
+   * yields fresh input happens in `estimateCost()`, not here, because PromQL
+   * cannot express it without a join.
+   */
+  codexTokensByModelAndType: `sum by (${LABELS.MODEL}, ${LABELS.CODEX_TOKEN_TYPE}) (increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}=~"${CODEX_BILLABLE_TOKEN_TYPE_MATCHER}"}[$__range]))`,
 
   /** Codex tool calls by tool name */
   codexToolCallsByTool: `sum by (${LABELS.CODEX_TOOL}) (increase(${METRICS.CODEX.TOOL_CALL}{${CODEX_CONTEXT_FILTER}}[$__range]))`,

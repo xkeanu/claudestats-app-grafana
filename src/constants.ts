@@ -89,6 +89,32 @@ export const LABELS = {
   CODEX_SUCCESS: 'success', // tool call / api request: "true" | "false"
 } as const;
 
+/**
+ * The only `token_type` values on `codex_turn_token_usage_sum` that may enter
+ * cost arithmetic, and the order they are reported in.
+ *
+ * The metric carries six values, and three of them are traps. Measured against
+ * the live datasource over 90d, on every model without exception:
+ *
+ *   total == input + output          (so `total` is a sum, not a fourth type)
+ *   cached_input <= input            (`input` is GROSS and already contains it)
+ *   reasoning_output <= output       (a subset of `output`)
+ *   cache_write_input == 0           (present, always zero)
+ *   non_cached_input                 (absent from this metric entirely)
+ *
+ * Because `input` is gross, fresh input must be derived as
+ * `max(0, input - cached_input)` — charging `input` at the input rate AND
+ * `cached_input` at the cache-read rate bills ~95% of all Codex tokens twice.
+ *
+ * See docs/research/2026-06-27-telemetry/03-real-data-inventory.md section 6.
+ */
+export const CODEX_BILLABLE_TOKEN_TYPES = ['input', 'cached_input', 'output'] as const;
+
+export type CodexBillableTokenType = (typeof CODEX_BILLABLE_TOKEN_TYPES)[number];
+
+/** Prometheus regex alternation over CODEX_BILLABLE_TOKEN_TYPES, for query selectors. */
+export const CODEX_BILLABLE_TOKEN_TYPE_MATCHER = CODEX_BILLABLE_TOKEN_TYPES.join('|');
+
 export interface ModelFamily {
   key: string;
   display: string;
