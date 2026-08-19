@@ -15,22 +15,43 @@ jest.mock('@grafana/scenes', () => ({
   },
   QueryVariable: class QueryVariable {
     state: Record<string, unknown>;
+    changeValueTo = jest.fn();
+    subscribers: Array<(state: Record<string, unknown>) => void> = [];
 
     constructor(initialState: Record<string, unknown>) {
       this.state = initialState;
     }
+
+    subscribeToState(handler: (state: Record<string, unknown>) => void) {
+      this.subscribers.push(handler);
+      return { unsubscribe: jest.fn() };
+    }
+
+    emit(state: Record<string, unknown>) {
+      this.state = { ...this.state, ...state };
+      this.subscribers.forEach((handler) => handler(this.state));
+    }
   },
   SceneVariableSet: class SceneVariableSet {
     state: Record<string, unknown>;
+    activationHandlers: Array<() => void> = [];
 
     constructor(initialState: Record<string, unknown>) {
       this.state = initialState;
+    }
+
+    addActivationHandler(handler: () => void) {
+      this.activationHandlers.push(handler);
+    }
+
+    activate() {
+      this.activationHandlers.forEach((handler) => handler());
     }
   },
 }));
 
 import { CODING_TOOLS, LABELS, METRICS, MODEL_FAMILIES, OTHER_FAMILY, ROUTES } from '../../constants';
-import { getCodingToolVariable, getProviderVariable, getSharedVariables } from '../variables';
+import { getCodingToolVariable, getModelVariable, getProviderVariable, getSharedVariables } from '../variables';
 import { PROVIDER_FILTERS, QUERIES, withProviderLabel } from '../queries';
 
 describe('coding tool integration contracts', () => {
@@ -332,5 +353,64 @@ describe('provider filter application', () => {
     ]) {
       expect(query).not.toContain(LABELS.PROVIDER);
     }
+  });
+});
+
+describe('model cascade reset', () => {
+  const activatedSet = () => {
+    const set = getSharedVariables() as unknown as {
+      activate: () => void;
+      state: { variables: Array<{ state: { name: string } }> };
+    };
+    set.activate();
+
+    const model = set.state.variables.find((variable) => variable.state.name === 'model');
+    return { set, model: model as unknown as ModelVariableMock };
+  };
+
+  interface ModelVariableMock {
+    emit: (state: Record<string, unknown>) => void;
+    changeValueTo: jest.Mock;
+  }
+
+  it('narrows the model query by the selected provider', () => {
+    const query = (getModelVariable().state.query as unknown as { query: string }).query;
+
+    expect(query).toContain('${provider:raw}');
+    expect(query).toContain(`, ${LABELS.MODEL})`);
+  });
+
+  it('resets a model excluded by the newly selected provider back to All', () => {
+    const { model } = activatedSet();
+
+    // Provider switched to Claude: the option list refreshed, glm-4.7 did not survive it.
+    model.emit({
+      loading: false,
+      value: 'glm-4.7',
+      options: [{ value: 'claude-opus-5', label: 'claude-opus-5' }],
+    });
+
+    expect(model.changeValueTo).toHaveBeenCalledWith('$__all', 'All');
+  });
+
+  it('leaves a model that the new provider still includes alone', () => {
+    const { model } = activatedSet();
+
+    model.emit({
+      loading: false,
+      value: 'claude-opus-5',
+      options: [{ value: 'claude-opus-5', label: 'claude-opus-5' }],
+    });
+
+    expect(model.changeValueTo).not.toHaveBeenCalled();
+  });
+
+  it('does not reset while the option list is still loading or already All', () => {
+    const { model } = activatedSet();
+
+    model.emit({ loading: true, value: 'glm-4.7', options: [] });
+    model.emit({ loading: false, value: '$__all', options: [{ value: 'claude-opus-5', label: 'x' }] });
+
+    expect(model.changeValueTo).not.toHaveBeenCalled();
   });
 });
