@@ -5,16 +5,16 @@ import {
   SceneQueryRunner,
   SceneTimeRange,
   SceneVariableSet,
-  PanelBuilders,
   SceneDataTransformer,
   VariableValueSelectors,
   SceneControlsSpacer,
   SceneTimePicker,
   SceneRefreshPicker,
 } from '@grafana/scenes';
-import { BigValueGraphMode, LegendDisplayMode, LineInterpolation, StackingMode } from '@grafana/schema';
+import { BigValueGraphMode, LineInterpolation, StackingMode } from '@grafana/schema';
 import { QUERIES } from '../queries';
 import { makeBlendedCostTransformation } from '../../pricing/costTransformation';
+import { barPanel, statPanel, timeseriesPanel } from '../viz/panels';
 
 /** Panels that break cost down by a label Codex does not emit cannot meaningfully blend. */
 const CLAUDE_ONLY_NOTE =
@@ -140,36 +140,28 @@ export function getOverviewScene(
           height: PANEL_HEIGHTS.STAT,
           children: [
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Total Cost *')
-                .setDescription(`* INCLUDES AN ESTIMATED COMPONENT. Claude cost is measured. Codex emits no cost metric, so its spend is ESTIMATED from token counts times a published price table — see the Codex tab for the estimate, its as-of date and unpriced token volume.`)
-                .setUnit('currencyUSD')
-                .setData(blendedCostData)
-                .setColor({ mode: 'thresholds' })
+              body: statPanel({
+                title: 'Total Cost *',
+                description: `* INCLUDES AN ESTIMATED COMPONENT. Claude cost is measured. Codex emits no cost metric, so its spend is ESTIMATED from token counts times a published price table — see the Codex tab for the estimate, its as-of date and unpriced token volume.`,
+                quantity: 'cost',
+                data: blendedCostData,
+                color: { mode: 'thresholds' },
+              })
                 .setOption('graphMode', BigValueGraphMode.None)
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Total Tokens')
-                .setUnit('short')
-                .setData(totalTokensQuery)
+              body: statPanel({ title: 'Total Tokens', quantity: 'tokens', data: totalTokensQuery })
                 .setOption('graphMode', BigValueGraphMode.None)
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Sessions / Turns')
-                .setUnit('short')
-                .setData(totalSessionsQuery)
+              body: statPanel({ title: 'Sessions / Turns', quantity: 'count', data: totalSessionsQuery })
                 .setOption('graphMode', BigValueGraphMode.None)
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Claude Active Users')
-                .setUnit('short')
-                .setData(activeUsersQuery)
+              body: statPanel({ title: 'Claude Active Users', quantity: 'count', data: activeUsersQuery })
                 .setOption('graphMode', BigValueGraphMode.None)
                 .build(),
             }),
@@ -182,24 +174,27 @@ export function getOverviewScene(
           children: [
             new SceneFlexItem({
               width: '60%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Claude Cost Over Time')
-                .setDescription(CLAUDE_ONLY_NOTE)
-                .setUnit('currencyUSD')
-                .setData(costOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Not clustered: `provider` is the bounded CAG-3 family set, well
+              // under the time series limit.
+              body: timeseriesPanel({
+                title: 'Claude Cost Over Time',
+                description: CLAUDE_ONLY_NOTE,
+                quantity: 'cost',
+                data: costOverTimeQuery,
+              })
                 .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
             new SceneFlexItem({
               width: '40%',
-              body: PanelBuilders.piechart()
-                .setTitle('Claude Cost by Device')
-                .setDescription(CLAUDE_ONLY_NOTE)
-                .setUnit('currencyUSD')
-                .setData(costByDeviceQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
-                .build(),
+              // Ranked comparison over an unbounded dimension: bar, clustered.
+              body: barPanel({
+                title: 'Claude Cost by Device',
+                description: CLAUDE_ONLY_NOTE,
+                quantity: 'cost',
+                data: costByDeviceQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
           ],
         }),
@@ -210,22 +205,24 @@ export function getOverviewScene(
           children: [
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Token Usage Over Time')
-                .setUnit('short')
-                .setData(tokensOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Not clustered: token `type` is a bounded four-value set.
+              body: timeseriesPanel({
+                title: 'Token Usage Over Time',
+                quantity: 'tokens',
+                data: tokensOverTimeQuery,
+              })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Claude Active Time Over Time')
-                .setUnit('s')
-                .setData(activeTimeByTypeOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Not clustered: active time `type` is user | cli.
+              body: timeseriesPanel({
+                title: 'Claude Active Time Over Time',
+                quantity: 'durationSeconds',
+                data: activeTimeByTypeOverTimeQuery,
+              })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 20)
                 .build(),
