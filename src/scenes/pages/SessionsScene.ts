@@ -5,14 +5,14 @@ import {
   SceneQueryRunner,
   SceneTimeRange,
   SceneVariableSet,
-  PanelBuilders,
   VariableValueSelectors,
   SceneControlsSpacer,
   SceneTimePicker,
   SceneRefreshPicker,
 } from '@grafana/scenes';
-import { BigValueGraphMode, LegendDisplayMode, LineInterpolation, StackingMode } from '@grafana/schema';
+import { BigValueGraphMode, LineInterpolation, StackingMode } from '@grafana/schema';
 import { QUERIES } from '../queries';
+import { barPanel, statPanel, timeseriesPanel } from '../viz/panels';
 import { PANEL_HEIGHTS } from '../../constants';
 
 export function getSessionsScene(
@@ -132,39 +132,43 @@ export function getSessionsScene(
           height: PANEL_HEIGHTS.STAT,
           children: [
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Sessions / Turns')
-                .setUnit('short')
-                .setData(totalSessionsQuery)
+              body: statPanel({
+                title: 'Sessions / Turns',
+                quantity: 'count',
+                data: totalSessionsQuery,
+                color: { fixedColor: 'blue', mode: 'fixed' },
+              })
                 .setOption('graphMode', BigValueGraphMode.Area)
-                .setColor({ fixedColor: 'blue', mode: 'fixed' })
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Avg Tokens / Session')
-                .setUnit('short')
-                .setData(avgTokensPerSessionQuery)
+              body: statPanel({
+                title: 'Avg Tokens / Session',
+                quantity: 'tokens',
+                data: avgTokensPerSessionQuery,
+                color: { fixedColor: 'green', mode: 'fixed' },
+              })
                 .setOption('graphMode', BigValueGraphMode.None)
-                .setColor({ fixedColor: 'green', mode: 'fixed' })
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Claude Avg Duration / Session')
-                .setUnit('s')
-                .setData(avgActiveTimePerSessionQuery)
+              body: statPanel({
+                title: 'Claude Avg Duration / Session',
+                quantity: 'durationSeconds',
+                data: avgActiveTimePerSessionQuery,
+                color: { fixedColor: 'purple', mode: 'fixed' },
+              })
                 .setOption('graphMode', BigValueGraphMode.None)
-                .setColor({ fixedColor: 'purple', mode: 'fixed' })
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Claude Avg Cost / Session')
-                .setUnit('currencyUSD')
-                .setData(avgCostPerSessionQuery)
+              body: statPanel({
+                title: 'Claude Avg Cost / Session',
+                quantity: 'cost',
+                data: avgCostPerSessionQuery,
+                color: { fixedColor: 'orange', mode: 'fixed' },
+              })
                 .setOption('graphMode', BigValueGraphMode.None)
-                .setColor({ fixedColor: 'orange', mode: 'fixed' })
                 .build(),
             }),
           ],
@@ -176,23 +180,25 @@ export function getSessionsScene(
           children: [
             new SceneFlexItem({
               width: '60%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Claude Sessions Over Time')
-                .setUnit('short')
-                .setData(sessionsOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Clustered: grouped by `device`, which grows with the team.
+              body: timeseriesPanel({
+                title: 'Claude Sessions Over Time',
+                quantity: 'count',
+                data: sessionsOverTimeQuery,
+                cluster: { mode: 'additive' },
+              })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
-                .setCustomFieldConfig('fillOpacity', 30)
                 .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
             new SceneFlexItem({
               width: '40%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Session Intensity (Tokens/Session)')
-                .setUnit('short')
-                .setData(sessionIntensityOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Not clustered: a single named series.
+              body: timeseriesPanel({
+                title: 'Session Intensity (Tokens/Session)',
+                quantity: 'tokens',
+                data: sessionIntensityOverTimeQuery,
+              })
                 .setCustomFieldConfig('fillOpacity', 20)
                 .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
@@ -206,30 +212,36 @@ export function getSessionsScene(
           children: [
             new SceneFlexItem({
               width: '40%',
-              body: PanelBuilders.piechart()
-                .setTitle('Claude Sessions by Device')
-                .setUnit('short')
-                .setData(sessionsByDeviceQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
-                .setOption('pieType', 'donut' as never)
-                .build(),
+              // Ranked comparison over an unbounded dimension: bar, clustered.
+              body: barPanel({
+                title: 'Claude Sessions by Device',
+                quantity: 'count',
+                data: sessionsByDeviceQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
             new SceneFlexItem({
               width: '30%',
-              body: PanelBuilders.piechart()
-                .setTitle('Sessions by Model')
-                .setUnit('short')
-                .setData(sessionsByModelQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
-                .build(),
+              // The worst cardinality offender on the app: raw `model`, around
+              // 34 distinct values. It is deliberately NOT grouped by provider
+              // — its Claude metric carries no `model` label, a CAG-3
+              // constraint this work must not undo — so clustering is what
+              // makes it readable.
+              body: barPanel({
+                title: 'Sessions by Model',
+                quantity: 'count',
+                data: sessionsByModelQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
             new SceneFlexItem({
               width: '30%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Claude Active Users Over Time')
-                .setUnit('short')
-                .setData(activeUsersOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Not clustered: a single named series.
+              body: timeseriesPanel({
+                title: 'Claude Active Users Over Time',
+                quantity: 'count',
+                data: activeUsersOverTimeQuery,
+              })
                 .setCustomFieldConfig('fillOpacity', 20)
                 .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
