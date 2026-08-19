@@ -414,3 +414,34 @@ describe('model cascade reset', () => {
     expect(model.changeValueTo).not.toHaveBeenCalled();
   });
 });
+
+describe('provider-grouped panels', () => {
+  const regrouped = ['costByModel', 'costOverTime', 'tokensByModel', 'sessionsByModel'] as const;
+
+  it('aggregates the four by-model panels on provider', () => {
+    for (const name of regrouped) {
+      const query = QUERIES[name];
+
+      expect([name, query.includes(`sum by (${LABELS.PROVIDER})`)]).toEqual([name, true]);
+      expect([name, query.includes('label_replace(')]).toEqual([name, true]);
+      // The chain must be present in full, not a hand-written partial.
+      expect([name, (query.match(/label_replace\(/g) ?? []).length]).toEqual([
+        name,
+        MODEL_FAMILIES.length + 1,
+      ]);
+    }
+  });
+
+  it('caps each re-grouped panel at the four families plus the catch-all', () => {
+    for (const name of regrouped) {
+      const assigned = [...QUERIES[name].matchAll(/"provider", "([^"]+)"/g)].map((match) => match[1]);
+
+      expect([name, new Set(assigned).size]).toEqual([name, MODEL_FAMILIES.length + 1]);
+    }
+  });
+
+  it('leaves the cost table grouped by raw model', () => {
+    expect(QUERIES.costTableByDevice).toContain(`sum by (${LABELS.DEVICE}, ${LABELS.MODEL})`);
+    expect(QUERIES.costTableByDevice).not.toContain('label_replace(');
+  });
+});

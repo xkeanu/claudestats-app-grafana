@@ -35,7 +35,7 @@ export function getCostsScene(
       {
         refId: 'CostByModel',
         expr: QUERIES.costByModel,
-        legendFormat: '{{model}}',
+        legendFormat: '{{provider}}',
       },
     ],
   });
@@ -46,7 +46,7 @@ export function getCostsScene(
       {
         refId: 'CostOverTime',
         expr: QUERIES.costOverTime,
-        legendFormat: '{{model}}',
+        legendFormat: '{{provider}}',
       },
     ],
   });
@@ -115,7 +115,7 @@ export function getCostsScene(
             new SceneFlexItem({
               width: '70%',
               body: PanelBuilders.piechart()
-                .setTitle('Cost by Model')
+                .setTitle('Cost by Provider')
                 .setUnit('currencyUSD')
                 .setData(costByModelQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
@@ -132,7 +132,7 @@ export function getCostsScene(
             new SceneFlexItem({
               width: '50%',
               body: PanelBuilders.timeseries()
-                .setTitle('Cost Over Time by Model')
+                .setTitle('Cost Over Time by Provider')
                 .setUnit('currencyUSD')
                 .setData(costOverTimeQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })

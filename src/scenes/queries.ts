@@ -67,13 +67,17 @@ export const QUERIES = {
   totalCost: `sum(increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__range]))`,
 
   /** Cost breakdown by model */
-  costByModel: `sum by (${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}}[$__range]))`,
+  costByModel: `sum by (${LABELS.PROVIDER}) (${withProviderLabel(
+    `sum by (${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}}[$__range]))`
+  )})`,
 
   /** Cost breakdown by device */
   costByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range]))`,
 
   /** Cost over time (rate) */
-  costOverTime: `sum(increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__rate_interval])) by (${LABELS.MODEL})`,
+  costOverTime: `sum by (${LABELS.PROVIDER}) (${withProviderLabel(
+    `sum by (${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__rate_interval]))`
+  )})`,
 
   /** Cost over time by device */
   costOverTimeByDevice: `sum(increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__rate_interval])) by (${LABELS.DEVICE})`,
@@ -96,7 +100,9 @@ export const QUERIES = {
   tokensByType: `sum by (${LABELS.TOKEN_TYPE}) (increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__range]) or label_replace(increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}!="total"}[$__range]), "${LABELS.TOKEN_TYPE}", "$1", "${LABELS.CODEX_TOKEN_TYPE}", "(.*)"))`,
 
   /** Tokens by model */
-  tokensByModel: `sum by (${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}}[$__range]) or increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}="total"}[$__range]))`,
+  tokensByModel: `sum by (${LABELS.PROVIDER}) (${withProviderLabel(
+    `sum by (${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}}[$__range]) or increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}="total"}[$__range]))`
+  )})`,
 
   /** Tokens over time */
   tokensOverTime: `sum by (${LABELS.TOKEN_TYPE}) (rate(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__rate_interval]) or label_replace(rate(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}!="total"}[$__rate_interval]), "${LABELS.TOKEN_TYPE}", "$1", "${LABELS.CODEX_TOKEN_TYPE}", "(.*)"))`,
@@ -128,7 +134,9 @@ export const QUERIES = {
   sessionIntensityOverTime: `(sum(increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__rate_interval])) or vector(0)) / clamp_min(round(sum(increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]))) or vector(0), 1)`,
 
   /** Sessions by model */
-  sessionsByModel: `round(sum by (${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__range]) or increase(${METRICS.CODEX.THREAD_STARTED}{${CODEX_CONTEXT_FILTER}}[$__range])))`,
+  sessionsByModel: `round(sum by (${LABELS.PROVIDER}) (${withProviderLabel(
+    `sum by (${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__range]) or increase(${METRICS.CODEX.THREAD_STARTED}{${CODEX_CONTEXT_FILTER}}[$__range]))`
+  )}))`,
 
   /** Active users over time */
   activeUsersOverTime: `count(count by (${LABELS.USER_EMAIL}) (increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]) > 0))`,
