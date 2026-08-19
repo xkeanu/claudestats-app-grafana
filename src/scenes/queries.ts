@@ -1,4 +1,46 @@
-import { METRICS, LABELS } from '../constants';
+import { METRICS, LABELS, MODEL_FAMILIES, OTHER_FAMILY } from '../constants';
+
+/**
+ * Wraps `inner` in a chained `label_replace` that synthesizes a `provider`
+ * label from `model`. No exporter emits `provider`; it is derived at query time.
+ *
+ * The catch-all is assigned innermost with a `.*` source pattern, so every
+ * series starts out labelled — including series carrying no `model` label at
+ * all, since a missing label reads as the empty string and `.*` matches it.
+ * The named rules are then applied outside it in `MODEL_FAMILIES` order, each
+ * overwriting the default for the models it matches. Reversing that order
+ * would silently classify everything as the catch-all.
+ */
+export function withProviderLabel(inner: string): string {
+  let expr = `label_replace(${inner}, "${LABELS.PROVIDER}", "${OTHER_FAMILY.display}", "${LABELS.MODEL}", ".*")`;
+
+  for (const family of MODEL_FAMILIES) {
+    expr = `label_replace(${expr}, "${LABELS.PROVIDER}", "${family.display}", "${LABELS.MODEL}", "${family.match}")`;
+  }
+
+  return expr;
+}
+
+/**
+ * Label-matcher fragment per provider family, keyed by display name. These are
+ * the values behind the `provider` variable's options, injected into queries
+ * with `${provider:raw}`.
+ *
+ * The catch-all is a negated matcher rather than a positive one: Prometheus
+ * RE2 has no negative lookahead, so "matches no named family" can only be
+ * expressed as `!~` over the alternation of every named rule. Both sides derive
+ * from `MODEL_FAMILIES`, so grouping and filtering cannot drift apart.
+ */
+export const PROVIDER_FILTERS: Record<string, string> = {
+  All: `${LABELS.MODEL}=~".*"`,
+  ...Object.fromEntries(
+    MODEL_FAMILIES.map((family) => [family.display, `${LABELS.MODEL}=~"${family.match}"`])
+  ),
+  [OTHER_FAMILY.display]: `${LABELS.MODEL}!~"${MODEL_FAMILIES.map((family) => family.match).join('|')}"`,
+};
+
+/** Provider matcher injected into query selectors; resolves via PROVIDER_FILTERS. */
+export const PROVIDER_FILTER = '${provider:raw}';
 
 /**
  * Claude Code filter fragment. Codex uses different labels, so Codex queries

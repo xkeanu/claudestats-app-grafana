@@ -31,7 +31,7 @@ jest.mock('@grafana/scenes', () => ({
 
 import { CODING_TOOLS, LABELS, METRICS, MODEL_FAMILIES, OTHER_FAMILY, ROUTES } from '../../constants';
 import { getCodingToolVariable } from '../variables';
-import { QUERIES } from '../queries';
+import { PROVIDER_FILTERS, QUERIES, withProviderLabel } from '../queries';
 
 describe('coding tool integration contracts', () => {
   it('defines provider-neutral labels without reusing decision source', () => {
@@ -190,5 +190,20 @@ describe('provider family rule table', () => {
   it('defines a catch-all family carrying no match fragment', () => {
     expect(OTHER_FAMILY.display).toBe('Other');
     expect('match' in OTHER_FAMILY).toBe(false);
+  });
+});
+
+describe('provider derivation helpers', () => {
+  it('wraps an expression in a label_replace chain', () => {
+    const wrapped = withProviderLabel('sum(up)');
+
+    expect(wrapped).toContain('sum(up)');
+    expect(wrapped.match(/label_replace\(/g)).toHaveLength(MODEL_FAMILIES.length + 1);
+  });
+
+  it('exposes a filter fragment per family plus All and the catch-all', () => {
+    expect(Object.keys(PROVIDER_FILTERS).sort()).toEqual(
+      ['All', ...MODEL_FAMILIES.map((family) => family.display), OTHER_FAMILY.display].sort()
+    );
   });
 });
