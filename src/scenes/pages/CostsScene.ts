@@ -5,17 +5,17 @@ import {
   SceneQueryRunner,
   SceneTimeRange,
   SceneVariableSet,
-  PanelBuilders,
   SceneDataTransformer,
   VariableValueSelectors,
   SceneControlsSpacer,
   SceneTimePicker,
   SceneRefreshPicker,
 } from '@grafana/scenes';
-import { BigValueGraphMode, LegendDisplayMode, LineInterpolation, StackingMode } from '@grafana/schema';
+import { BigValueGraphMode, LineInterpolation, StackingMode } from '@grafana/schema';
 import { QUERIES } from '../queries';
 import { PANEL_HEIGHTS } from '../../constants';
 import { makeBlendedCostTransformation } from '../../pricing/costTransformation';
+import { barPanel, piePanel, statPanel, tablePanel, timeseriesPanel } from '../viz/panels';
 
 /** Panels that break cost down by a label Codex does not emit cannot meaningfully blend. */
 const CLAUDE_ONLY_NOTE =
@@ -120,25 +120,27 @@ export function getCostsScene(
           children: [
             new SceneFlexItem({
               width: '30%',
-              body: PanelBuilders.stat()
-                .setTitle('Total Cost *')
-                .setDescription('* INCLUDES AN ESTIMATED COMPONENT. Claude cost is measured. Codex emits no cost metric, so its spend is ESTIMATED from token counts times a published price table — see the Codex tab for the estimate, its as-of date and unpriced token volume.')
-                .setUnit('currencyUSD')
-                .setData(blendedCostData)
+              body: statPanel({
+                title: 'Total Cost *',
+                description:
+                  '* INCLUDES AN ESTIMATED COMPONENT. Claude cost is measured. Codex emits no cost metric, so its spend is ESTIMATED from token counts times a published price table — see the Codex tab for the estimate, its as-of date and unpriced token volume.',
+                quantity: 'cost',
+                data: blendedCostData,
+                color: { mode: 'thresholds' },
+              })
                 .setOption('graphMode', BigValueGraphMode.Area)
-                .setColor({ mode: 'thresholds' })
                 .build(),
             }),
             new SceneFlexItem({
               width: '70%',
-              body: PanelBuilders.piechart()
-                .setTitle('Cost by Provider')
-                .setDescription(CLAUDE_ONLY_NOTE)
-                .setUnit('currencyUSD')
-                .setData(costByModelQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
-                .setOption('pieType', 'donut' as never)
-                .build(),
+              // Stays a pie: `provider` is the bounded CAG-3 family set, and
+              // the question is genuinely part-to-whole.
+              body: piePanel({
+                title: 'Cost by Provider',
+                description: CLAUDE_ONLY_NOTE,
+                quantity: 'cost',
+                data: costByModelQuery,
+              }).build(),
             }),
           ],
         }),
@@ -149,27 +151,28 @@ export function getCostsScene(
           children: [
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Cost Over Time by Provider')
-                .setDescription(CLAUDE_ONLY_NOTE)
-                .setUnit('currencyUSD')
-                .setData(costOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Not clustered: `provider` is the bounded family set.
+              body: timeseriesPanel({
+                title: 'Cost Over Time by Provider',
+                description: CLAUDE_ONLY_NOTE,
+                quantity: 'cost',
+                data: costOverTimeQuery,
+              })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
-                .setCustomFieldConfig('fillOpacity', 30)
                 .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Cost Over Time by Device')
-                .setDescription(CLAUDE_ONLY_NOTE)
-                .setUnit('currencyUSD')
-                .setData(costOverTimeByDeviceQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Clustered: `device` grows with the team.
+              body: timeseriesPanel({
+                title: 'Cost Over Time by Device',
+                description: CLAUDE_ONLY_NOTE,
+                quantity: 'cost',
+                data: costOverTimeByDeviceQuery,
+                cluster: { mode: 'additive' },
+              })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
-                .setCustomFieldConfig('fillOpacity', 30)
                 .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
@@ -182,25 +185,26 @@ export function getCostsScene(
           children: [
             new SceneFlexItem({
               width: '40%',
-              body: PanelBuilders.piechart()
-                .setTitle('Cost Distribution by Device')
-                .setDescription(CLAUDE_ONLY_NOTE)
-                .setUnit('currencyUSD')
-                .setData(costByDeviceQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
-                .setOption('pieType', 'donut' as never)
-                .build(),
+              // Ranked comparison over an unbounded dimension: bar, clustered.
+              body: barPanel({
+                title: 'Cost Distribution by Device',
+                description: CLAUDE_ONLY_NOTE,
+                quantity: 'cost',
+                data: costByDeviceQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
             new SceneFlexItem({
               width: '60%',
-              body: PanelBuilders.table()
-                .setTitle('Cost Breakdown by Device')
-                .setDescription(CLAUDE_ONLY_NOTE)
-                .setData(costTableQuery)
+              // Tables are exempt from clustering (REQ-015): per-row detail,
+              // including the raw per-model rows, is the point.
+              body: tablePanel({
+                title: 'Cost Breakdown by Device',
+                description: CLAUDE_ONLY_NOTE,
+                data: costTableQuery,
+              })
                 .setOption('sortBy', [{ displayName: 'Value', desc: true }])
-                .setOverrides((b) =>
-                  b.matchFieldsWithName('device').overrideDisplayName('Device')
-                )
+                .setOverrides((b) => b.matchFieldsWithName('device').overrideDisplayName('Device'))
                 .build(),
             }),
           ],
