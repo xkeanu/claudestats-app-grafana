@@ -29,7 +29,7 @@ jest.mock('@grafana/scenes', () => ({
   },
 }));
 
-import { CODING_TOOLS, LABELS, METRICS, ROUTES } from '../../constants';
+import { CODING_TOOLS, LABELS, METRICS, MODEL_FAMILIES, OTHER_FAMILY, ROUTES } from '../../constants';
 import { getCodingToolVariable } from '../variables';
 import { QUERIES } from '../queries';
 
@@ -159,5 +159,36 @@ describe('coding tool integration contracts', () => {
 
   it('exposes the Codex route for navigation', () => {
     expect(ROUTES.Codex).toBe('codex');
+  });
+});
+
+describe('provider family rule table', () => {
+  it('exposes a provider label name', () => {
+    expect(LABELS.PROVIDER).toBe('provider');
+  });
+
+  it('defines the four named families in order with distinct displays', () => {
+    expect(MODEL_FAMILIES.map((family) => family.key)).toEqual(['claude', 'gpt', 'glm', 'review']);
+
+    const displays = MODEL_FAMILIES.map((family) => family.display);
+    expect(new Set(displays).size).toBe(displays.length);
+
+    for (const family of MODEL_FAMILIES) {
+      expect(typeof family.match).toBe('string');
+      expect(family.match.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('uses an unanchored claude rule so anthropic/claude-* is not misfiled', () => {
+    const claude = MODEL_FAMILIES.find((family) => family.key === 'claude');
+
+    expect(claude?.match).toBe('.*claude.*');
+    // Prometheus regexes are fully anchored; prove the rule survives that.
+    expect(new RegExp(`^(?:${claude?.match})$`).test('anthropic/claude-sonnet-4.6')).toBe(true);
+  });
+
+  it('defines a catch-all family carrying no match fragment', () => {
+    expect(OTHER_FAMILY.display).toBe('Other');
+    expect('match' in OTHER_FAMILY).toBe(false);
   });
 });
