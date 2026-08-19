@@ -4,7 +4,8 @@ import {
   CustomVariable,
   SceneVariableSet,
 } from '@grafana/scenes';
-import { METRICS, LABELS, CODING_TOOLS } from '../constants';
+import { METRICS, LABELS, CODING_TOOLS, MODEL_FAMILIES, OTHER_FAMILY } from '../constants';
+import { PROVIDER_FILTERS } from './queries';
 
 /**
  * Creates a data source variable for Prometheus/Mimir
@@ -36,6 +37,29 @@ export function getTeamMemberVariable() {
     includeAll: true,
     defaultToAll: true,
     allValue: '.*',
+  });
+}
+
+/**
+ * Creates a provider family selector (Claude, GPT, GLM, Review, Other).
+ *
+ * A CustomVariable rather than a QueryVariable: the family set comes from the
+ * rule table, not from data, so there is nothing to query. Option values are
+ * complete label-matcher fragments, injected into queries with
+ * `${provider:raw}`.
+ */
+export function getProviderVariable() {
+  const familyOptions = [...MODEL_FAMILIES.map((family) => family.display), OTHER_FAMILY.display]
+    .map((display) => `${display} : ${PROVIDER_FILTERS[display]}`)
+    .join(', ');
+
+  return new CustomVariable({
+    name: 'provider',
+    label: 'Provider',
+    query: familyOptions,
+    includeAll: true,
+    defaultToAll: true,
+    allValue: PROVIDER_FILTERS.All,
   });
 }
 
@@ -209,6 +233,7 @@ export function getSharedVariables() {
     variables: [
       getPrometheusDataSourceVariable(),
       getTeamMemberVariable(),
+      getProviderVariable(),
       getModelVariable(),
       getCodingToolVariable(),
       getTerminalTypeVariable(),

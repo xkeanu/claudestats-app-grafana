@@ -30,7 +30,7 @@ jest.mock('@grafana/scenes', () => ({
 }));
 
 import { CODING_TOOLS, LABELS, METRICS, MODEL_FAMILIES, OTHER_FAMILY, ROUTES } from '../../constants';
-import { getCodingToolVariable } from '../variables';
+import { getCodingToolVariable, getProviderVariable, getSharedVariables } from '../variables';
 import { PROVIDER_FILTERS, QUERIES, withProviderLabel } from '../queries';
 
 describe('coding tool integration contracts', () => {
@@ -268,5 +268,33 @@ describe('provider derivation helpers', () => {
       expect(patched.PROVIDER_FILTERS.Llama).toBe(`${LABELS.MODEL}=~"llama.*"`);
       expect(patched.PROVIDER_FILTERS[OTHER_FAMILY.display]).toContain('llama.*');
     });
+  });
+});
+
+describe('provider variable', () => {
+  it('offers All plus one option per family, valued by matcher fragment', () => {
+    const variable = getProviderVariable();
+
+    expect(variable.state.name).toBe('provider');
+    expect(variable.state.includeAll).toBe(true);
+    expect(variable.state.defaultToAll).toBe(true);
+    expect(variable.state.allValue).toBe(PROVIDER_FILTERS.All);
+
+    const query = variable.state.query as string;
+    for (const display of [...MODEL_FAMILIES.map((family) => family.display), OTHER_FAMILY.display]) {
+      expect(query).toContain(`${display} : ${PROVIDER_FILTERS[display]}`);
+    }
+    expect(query.split(',')).toHaveLength(MODEL_FAMILIES.length + 1);
+    // The catch-all option must carry the negated matcher, not a positive one.
+    expect(query).toContain(`${OTHER_FAMILY.display} : ${LABELS.MODEL}!~"`);
+  });
+
+  it('places provider before model so the filter bar reads in cascade order', () => {
+    const names = (getSharedVariables().state.variables as Array<{ state: { name: string } }>).map(
+      (variable) => variable.state.name
+    );
+
+    expect(names).toContain('provider');
+    expect(names.indexOf('provider')).toBeLessThan(names.indexOf('model'));
   });
 });
