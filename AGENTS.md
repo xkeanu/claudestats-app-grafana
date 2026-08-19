@@ -180,9 +180,19 @@ estimate wherever it appears. Claude Code cost is measured
   round-trips through hand-edited provisioning YAML where the string `"false"`
   would otherwise be truthy.
 - **Provenance** — `snapshot` (shipped table), `live` (feed used), `fallback`
-  (refresh enabled but the feed was unreachable or malformed). `fallback` is
-  deliberately distinct from `snapshot`: a blocked refresh must not be
-  presentable as a chosen default. The Codex tab surfaces which is in use.
+  (refresh enabled but the feed was unreachable, malformed, or too thin to
+  trust). `fallback` is deliberately distinct from `snapshot`: a blocked refresh
+  must not be presentable as a chosen default. The Codex tab surfaces which is
+  in use.
+- **Feed validation** — a live feed is rejected unless it still prices at least
+  half the models the bundled table prices. A feed can parse cleanly and still
+  be truncated, half-migrated, or simply the wrong URL; accepting it would
+  replace the bundled table with a near-empty one, push active models into the
+  unpriced bucket and understate cost — worse than a blocked refresh, because it
+  looks successful. **Discard ratio is not a usable signal**: 59% of the real
+  feed's `openai`-provider entries legitimately lack a complete rate triple, so
+  that check would reject the genuine article. The threshold is deliberately lax
+  — it catches collapse, not the ordinary churn of a few deprecated models.
 
 #### Three rules that are cheap to get wrong and expensive to ship wrong
 

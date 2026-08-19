@@ -41,11 +41,29 @@ const SNAPSHOT_TABLE: PriceTable = {
 const FALLBACK_TABLE: PriceTable = { ...SNAPSHOT_TABLE, source: 'fallback' };
 
 /**
+ * Fraction of the bundled table a live feed must still price to be trusted.
+ *
+ * A feed that parses cleanly can still be truncated, half-migrated, or simply
+ * the wrong URL. Accepting it would replace the bundled table with a near-empty
+ * one, push active models into the unpriced bucket, and understate cost — the
+ * "degrade to a wrong number" failure the fallback exists to prevent, and worse
+ * than a blocked refresh because it looks successful.
+ *
+ * Coverage is measured against the bundled table because both come from the
+ * same upstream, so it should not collapse between releases. Discard ratio is
+ * NOT usable as a signal: 59% of the real feed's openai-provider entries
+ * legitimately lack a complete rate triple, so that check would reject the
+ * genuine article. Half is deliberately lax — this catches collapse, not the
+ * ordinary churn of a few deprecated models.
+ */
+const MIN_SNAPSHOT_COVERAGE = 0.5;
+
+/**
  * Extracts the usable subset of a LiteLLM-shaped payload.
  *
  * Only `openai`-provider keys are kept — Codex reports bare model ids that
  * match that key set exactly — and only when all three rates are present and
- * numeric. Returns null rather than an empty table when nothing survives, so a
+ * numeric. Returns null rather than a thin table when too little survives, so a
  * schema change upstream degrades to the known-good snapshot instead of to a
  * table that silently prices everything at zero.
  */
@@ -83,7 +101,17 @@ function parseFeed(payload: unknown): Record<string, ModelRates> | null {
     }
   }
 
-  return Object.keys(rates).length === 0 ? null : rates;
+  if (Object.keys(rates).length === 0) {
+    return null;
+  }
+
+  const bundledKeys = Object.keys(SNAPSHOT_TABLE.rates);
+  const covered = bundledKeys.filter((key) => rates[key] !== undefined).length;
+  if (covered < bundledKeys.length * MIN_SNAPSHOT_COVERAGE) {
+    return null;
+  }
+
+  return rates;
 }
 
 /**

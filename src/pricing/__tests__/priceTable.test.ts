@@ -2,13 +2,19 @@ import snapshot from '../price-snapshot.json';
 import { DEFAULT_PRICE_FEED_URL } from '../settings';
 import { __resetPriceTableCache, resolvePriceTable } from '../priceTable';
 
-const LIVE_FEED = {
-  'gpt-5.6-sol': {
-    litellm_provider: 'openai',
-    input_cost_per_token: 9e-6,
-    cache_read_input_token_cost: 9e-7,
-    output_cost_per_token: 9e-5,
-  },
+const LIVE_RATES = {
+  litellm_provider: 'openai',
+  input_cost_per_token: 9e-6,
+  cache_read_input_token_cost: 9e-7,
+  output_cost_per_token: 9e-5,
+};
+
+/**
+ * A feed narrow enough to be rejected: it parses cleanly but prices almost
+ * nothing next to the bundled table.
+ */
+const NARROW_FEED = {
+  'gpt-5.6-sol': LIVE_RATES,
   'anthropic/claude-x': {
     litellm_provider: 'anthropic',
     input_cost_per_token: 1e-6,
@@ -16,6 +22,27 @@ const LIVE_FEED = {
     output_cost_per_token: 1e-5,
   },
 };
+
+/**
+ * A realistic feed: covers the bundled table, plus whatever extras are passed.
+ * The real upstream covers 100% of the snapshot's keys.
+ */
+const wideFeed = (extras: Record<string, unknown> = {}): Record<string, unknown> => {
+  const feed: Record<string, unknown> = {};
+  for (const key of Object.keys(snapshot.models)) {
+    feed[key] = LIVE_RATES;
+  }
+  return { ...feed, ...extras };
+};
+
+const LIVE_FEED = wideFeed({
+  'anthropic/claude-x': {
+    litellm_provider: 'anthropic',
+    input_cost_per_token: 1e-6,
+    cache_read_input_token_cost: 1e-7,
+    output_cost_per_token: 1e-5,
+  },
+});
 
 const okResponse = (body: unknown) => ({ ok: true, status: 200, json: async () => body });
 
@@ -52,10 +79,12 @@ describe('resolvePriceTable', () => {
 
     it('keeps only openai-provider entries carrying a complete rate triple', async () => {
       fetchMock.mockResolvedValue(
-        okResponse({
-          ...LIVE_FEED,
-          'gpt-partial': { litellm_provider: 'openai', input_cost_per_token: 1e-6, output_cost_per_token: 1e-5 },
-        })
+        okResponse(
+          wideFeed({
+            'anthropic/claude-x': { litellm_provider: 'anthropic', input_cost_per_token: 1e-6 },
+            'gpt-partial': { litellm_provider: 'openai', input_cost_per_token: 1e-6, output_cost_per_token: 1e-5 },
+          })
+        )
       );
 
       const table = await resolvePriceTable({ priceRefreshEnabled: true, priceFeedUrl: 'https://feed.test/p.json' });
@@ -118,6 +147,47 @@ describe('resolvePriceTable', () => {
         },
       });
       await expectFallback();
+    });
+
+    it('falls back when the feed prices far fewer models than the bundled table', async () => {
+      // A truncated, partially migrated or misconfigured feed can parse cleanly
+      // and still price almost nothing. Accepting it would silently replace the
+      // bundled table, push active models into the unpriced bucket and
+      // understate cost — the "degrade to a wrong number" case the fallback
+      // exists to prevent. Coverage is judged against the bundled table because
+      // both come from the same upstream.
+      fetchMock.mockResolvedValue(okResponse(NARROW_FEED));
+      await expectFallback();
+    });
+
+    it('accepts a feed that covers the bundled table even if most upstream entries are incomplete', async () => {
+      // 59% of the real feed's openai-provider entries legitimately lack a
+      // complete rate triple, so a discard-ratio guard would reject the genuine
+      // article. Coverage, not discard ratio, is the signal.
+      const incomplete: Record<string, unknown> = {};
+      for (let i = 0; i < 500; i++) {
+        incomplete[`incomplete-${i}`] = { litellm_provider: 'openai', input_cost_per_token: 1e-6 };
+      }
+      fetchMock.mockResolvedValue(okResponse(wideFeed(incomplete)));
+
+      const table = await resolvePriceTable({ priceRefreshEnabled: true, priceFeedUrl: 'https://feed.test/p.json' });
+
+      expect(table.source).toBe('live');
+      expect(table.rates['gpt-5.3-codex'].input_cost_per_token).toBe(9e-6);
+    });
+
+    it('accepts a feed that drops a few deprecated models', async () => {
+      // Ordinary upstream churn must not trip the guard.
+      const keys = Object.keys(snapshot.models);
+      const wide: Record<string, unknown> = {};
+      for (const key of keys.slice(0, keys.length - 5)) {
+        wide[key] = LIVE_RATES;
+      }
+      fetchMock.mockResolvedValue(okResponse(wide));
+
+      const table = await resolvePriceTable({ priceRefreshEnabled: true, priceFeedUrl: 'https://feed.test/p.json' });
+
+      expect(table.source).toBe('live');
     });
   });
 
