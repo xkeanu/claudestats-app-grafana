@@ -5,21 +5,14 @@ import {
   SceneQueryRunner,
   SceneTimeRange,
   SceneVariableSet,
-  PanelBuilders,
   VariableValueSelectors,
   SceneControlsSpacer,
   SceneTimePicker,
   SceneRefreshPicker,
 } from '@grafana/scenes';
-import {
-  BigValueGraphMode,
-  LegendDisplayMode,
-  StackingMode,
-  BarGaugeDisplayMode,
-  BarGaugeValueMode,
-  VizOrientation,
-} from '@grafana/schema';
+import { BigValueGraphMode, StackingMode } from '@grafana/schema';
 import { QUERIES } from '../queries';
+import { barPanel, statPanel, tablePanel, timeseriesPanel } from '../viz/panels';
 import { PANEL_HEIGHTS } from '../../constants';
 
 export function getLanguagesScene(
@@ -130,26 +123,17 @@ export function getLanguagesScene(
           height: PANEL_HEIGHTS.STAT,
           children: [
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Languages Used')
-                .setUnit('short')
-                .setData(totalLanguagesQuery)
+              body: statPanel({ title: 'Languages Used', quantity: 'count', data: totalLanguagesQuery })
                 .setOption('graphMode', BigValueGraphMode.None)
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Tool Decisions')
-                .setUnit('short')
-                .setData(totalLanguageEditsQuery)
+              body: statPanel({ title: 'Tool Decisions', quantity: 'count', data: totalLanguageEditsQuery })
                 .setOption('graphMode', BigValueGraphMode.None)
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Acceptance Rate')
-                .setUnit('percent')
-                .setData(overallAcceptanceRateQuery)
+              body: statPanel({ title: 'Acceptance Rate', quantity: 'rate', data: overallAcceptanceRateQuery })
                 .setOption('graphMode', BigValueGraphMode.None)
                 .build(),
             }),
@@ -162,45 +146,42 @@ export function getLanguagesScene(
           children: [
             new SceneFlexItem({
               width: '40%',
-              body: PanelBuilders.piechart()
-                .setTitle('Tool Decisions by Language')
-                .setData(toolDecisionsByLanguageQuery)
-                .setOption('legend', {
-                  displayMode: LegendDisplayMode.Table,
-                  placement: 'right',
-                  values: ['value', 'percent'] as never,
-                })
-                .build(),
+              // Ranked comparison over an unbounded dimension: bar, clustered.
+              body: barPanel({
+                title: 'Tool Decisions by Language',
+                quantity: 'count',
+                data: toolDecisionsByLanguageQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
             new SceneFlexItem({
               width: '30%',
-              body: PanelBuilders.bargauge()
-                .setTitle('Acceptance by Language')
-                .setUnit('percent')
-                .setData(languageAcceptanceRateQuery)
-                .setOption('displayMode', BarGaugeDisplayMode.Gradient)
-                .setOption('orientation', VizOrientation.Horizontal)
-                .setOption('valueMode', BarGaugeValueMode.Text)
-                .setOption('showUnfilled', true)
-                .setOption('minVizWidth', 150)
-                .setOption('minVizHeight', 25)
-                .setDisplayName('${__series.name}')
-                .build(),
+              // Ratio mode: summing acceptance percentages into a residual
+              // would produce a number that means nothing, so the tail is
+              // dropped rather than bucketed (REQ-014).
+              //
+              // Known limitation, recorded as a follow-up rather than fixed
+              // here: ranking a ratio by its own value favours low-volume
+              // outliers — a language with one accepted edit ranks at 100%.
+              // Adding a minimum-volume floor would change the number the
+              // panel reports, which this ticket's non-goals exclude.
+              body: barPanel({
+                title: 'Acceptance by Language',
+                quantity: 'rate',
+                data: languageAcceptanceRateQuery,
+                cluster: { mode: 'ratio' },
+              }).build(),
             }),
             new SceneFlexItem({
               width: '30%',
-              body: PanelBuilders.bargauge()
-                .setTitle('By Language and Tool')
-                .setUnit('short')
-                .setData(toolDecisionsByToolAndLanguageQuery)
-                .setOption('displayMode', BarGaugeDisplayMode.Gradient)
-                .setOption('orientation', VizOrientation.Horizontal)
-                .setOption('valueMode', BarGaugeValueMode.Text)
-                .setOption('showUnfilled', true)
-                .setOption('minVizWidth', 150)
-                .setOption('minVizHeight', 25)
-                .setDisplayName('${__series.name}')
-                .build(),
+              // The fastest-growing dimension on the app: the language x tool
+              // cross-product. Additive clustering at the bar limit.
+              body: barPanel({
+                title: 'By Language and Tool',
+                quantity: 'count',
+                data: toolDecisionsByToolAndLanguageQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
           ],
         }),
@@ -210,13 +191,14 @@ export function getLanguagesScene(
           height: PANEL_HEIGHTS.LARGE,
           children: [
             new SceneFlexItem({
-              body: PanelBuilders.timeseries()
-                .setTitle('Language Usage Over Time')
-                .setUnit('short')
-                .setData(toolDecisionsByLanguageOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Clustered: `language` grows without bound.
+              body: timeseriesPanel({
+                title: 'Language Usage Over Time',
+                quantity: 'count',
+                data: toolDecisionsByLanguageOverTimeQuery,
+                cluster: { mode: 'additive' },
+              })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
-                .setCustomFieldConfig('fillOpacity', 30)
                 .build(),
             }),
           ],
@@ -228,9 +210,11 @@ export function getLanguagesScene(
           children: [
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.table()
-                .setTitle('Tool Decisions by Team Member')
-                .setData(toolDecisionsByLanguageAndMemberQuery)
+              // Tables are exempt from clustering (REQ-015).
+              body: tablePanel({
+                title: 'Tool Decisions by Team Member',
+                data: toolDecisionsByLanguageAndMemberQuery,
+              })
                 .setOption('sortBy', [{ displayName: 'Value', desc: true }])
                 .setOverrides((b) =>
                   b
@@ -243,9 +227,11 @@ export function getLanguagesScene(
             }),
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.table()
-                .setTitle('Tool Decisions by Device')
-                .setData(toolDecisionsByLanguageAndDeviceQuery)
+              // Tables are exempt from clustering (REQ-015).
+              body: tablePanel({
+                title: 'Tool Decisions by Device',
+                data: toolDecisionsByLanguageAndDeviceQuery,
+              })
                 .setOption('sortBy', [{ displayName: 'Value', desc: true }])
                 .setOverrides((b) =>
                   b
