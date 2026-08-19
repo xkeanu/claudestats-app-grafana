@@ -194,16 +194,79 @@ describe('provider family rule table', () => {
 });
 
 describe('provider derivation helpers', () => {
-  it('wraps an expression in a label_replace chain', () => {
+  /** Prometheus regexes are fully anchored; mirror that when testing a fragment. */
+  const anchored = (fragment: string) => new RegExp(`^(?:${fragment})$`);
+
+  it('wraps an expression in a label_replace chain, one call per family plus the catch-all', () => {
     const wrapped = withProviderLabel('sum(up)');
 
     expect(wrapped).toContain('sum(up)');
     expect(wrapped.match(/label_replace\(/g)).toHaveLength(MODEL_FAMILIES.length + 1);
   });
 
+  it('emits the catch-all innermost and the named rules outside it in table order', () => {
+    const wrapped = withProviderLabel('sum(up)');
+
+    // Nesting is left-to-right in the emitted string: the innermost call is
+    // written first. Inverting the chain would classify everything as Other.
+    const positions = [OTHER_FAMILY.display, ...MODEL_FAMILIES.map((family) => family.display)].map(
+      (display) => wrapped.indexOf(`"${LABELS.PROVIDER}", "${display}"`)
+    );
+
+    expect(positions).not.toContain(-1);
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+  });
+
+  it('anchors the claude rule wide enough for prefixed and suffixed model names', () => {
+    const claude = MODEL_FAMILIES.find((family) => family.key === 'claude')!;
+
+    expect(anchored(claude.match).test('anthropic/claude-sonnet-4.6')).toBe(true);
+    expect(anchored(claude.match).test('claude-opus-5[1m]')).toBe(true);
+    // The reason the rule is not a bare prefix: it would drop the vendor-prefixed values.
+    expect(anchored('claude.*').test('anthropic/claude-sonnet-4.6')).toBe(false);
+  });
+
   it('exposes a filter fragment per family plus All and the catch-all', () => {
     expect(Object.keys(PROVIDER_FILTERS).sort()).toEqual(
       ['All', ...MODEL_FAMILIES.map((family) => family.display), OTHER_FAMILY.display].sort()
     );
+
+    for (const family of MODEL_FAMILIES) {
+      expect(PROVIDER_FILTERS[family.display]).toBe(`${LABELS.MODEL}=~"${family.match}"`);
+    }
+  });
+
+  it('negates every named rule in the catch-all filter, since RE2 has no lookahead', () => {
+    const catchAll = PROVIDER_FILTERS[OTHER_FAMILY.display];
+
+    expect(catchAll).toContain(`${LABELS.MODEL}!~"`);
+    expect(catchAll).not.toContain(`${LABELS.MODEL}=~"`);
+
+    const alternation = catchAll.slice(catchAll.indexOf('"') + 1, catchAll.lastIndexOf('"'));
+    expect(alternation.split('|')).toEqual(MODEL_FAMILIES.map((family) => family.match));
+
+    // A model matching no named rule is the only thing the fragment admits.
+    expect(anchored(alternation).test('some-unknown-model')).toBe(false);
+    expect(anchored(alternation).test('glm-4.7')).toBe(true);
+  });
+
+  it('derives both helpers from the rule table, so a fifth family needs no edit here', () => {
+    jest.isolateModules(() => {
+      const actual = jest.requireActual('../../constants');
+      jest.doMock('../../constants', () => ({
+        ...actual,
+        MODEL_FAMILIES: [...actual.MODEL_FAMILIES, { key: 'llama', display: 'Llama', match: 'llama.*' }],
+      }));
+
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const patched = require('../queries');
+
+      expect(patched.withProviderLabel('sum(up)')).toContain(`"${LABELS.PROVIDER}", "Llama"`);
+      expect(patched.withProviderLabel('sum(up)').match(/label_replace\(/g)).toHaveLength(
+        MODEL_FAMILIES.length + 2
+      );
+      expect(patched.PROVIDER_FILTERS.Llama).toBe(`${LABELS.MODEL}=~"llama.*"`);
+      expect(patched.PROVIDER_FILTERS[OTHER_FAMILY.display]).toContain('llama.*');
+    });
   });
 });
