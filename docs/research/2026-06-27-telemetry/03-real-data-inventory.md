@@ -186,3 +186,80 @@ Goals created:        2
 2. **`codex_guardian_review_*`** is the richest undocumented metric family: full risk scoring pipeline (risk_level, outcome, user_authorization, had_prior_review_context, reviewed_action_truncated) enabling a complete AI safety audit trail — nothing in AGENTS.md hints at this.
 3. **`codex_feature_state_total`** exposes 15 feature flags per session (memories, multi_agent, apps, hooks, plugins, etc.) enabling feature adoption cohort analysis.
 4. **`mcp_server_name`/`mcp_tool_name` are always "custom"** — the fine-grained MCP attribution labels exist in the schema but carry no useful signal in real data.
+
+---
+
+## 6. Codex Model → Price-Key Mapping (2026-08-19, CAG-10 / T1)
+
+Queried against the same remote Prometheus, range form over 90d (instant queries
+under-report — several `codex_*` counters are stale at `now`).
+
+```
+count by (model) (increase(codex_turn_token_usage_sum{model!=""}[90d]))
+sum by (model,token_type) (increase(codex_turn_token_usage_sum{model!=""}[90d]))
+```
+
+### Matching rule
+
+**Exact string match** of the `model` label against the key set of
+`model_prices_and_context_window.json` filtered to `litellm_provider == "openai"`.
+No prefix strip, no normalization.
+
+A `chatgpt/`-prefix fallback was evaluated and rejected: the only live value it
+would reach (`chatgpt/gpt-5.3-codex-spark`) carries no cost fields at all, so it
+stays unpriced under the complete-triple rule either way. Adding the fallback
+would buy nothing and widen the surface for a wrong match.
+
+### Classification of all 8 live model values
+
+| `model` | Matched | Billable tokens (90d) | Share |
+|---|---|---|---|
+| `gpt-5.6-sol` | yes | 894,440,921 | 53.22% |
+| `gpt-5.5` | yes | 338,077,555 | 20.11% |
+| `gpt-5.6-terra` | yes | 163,824,640 | 9.75% |
+| `codex-auto-review` | **no** | 160,648,520 | 9.56% |
+| `gpt-5.4` | yes | 64,189,956 | 3.82% |
+| `gpt-5.4-mini` | yes | 33,352,232 | 1.98% |
+| `gpt-5.3-codex-spark` | **no** | 24,493,753 | 1.46% |
+| `gpt-5.6-luna` | yes | 1,690,159 | 0.10% |
+
+**Unmatched: `codex-auto-review` and `gpt-5.3-codex-spark` — 11.02% of billable
+Codex tokens.** `codex-auto-review` is a synthetic label for Codex's own review
+pass, not an OpenAI catalogue model; it has no price key and is not expected to
+gain one.
+
+`gpt-5.3-codex` is present in the feed at 1.75e-6 input / 1.75e-7 cache read /
+1.4e-5 output, confirming the rates the plan cites — but that exact key carries
+no traffic on this datasource.
+
+### Correction: `token_type` semantics
+
+`codex_turn_token_usage_sum` carries six `token_type` values, not the four the
+plan assumed. Measured over 90d, per model, without exception:
+
+```
+total == input + output          (within 0.13%, increase() extrapolation noise)
+cached_input <= input            (cached_input is a SUBSET of input, ~95% of it)
+reasoning_output <= output       (subset of output)
+cache_write_input == 0           (present, always zero)
+non_cached_input                 (absent on this metric entirely)
+```
+
+So `input` is the **gross** input count and already contains `cached_input`.
+
+**Only three token types may enter the cost arithmetic, and fresh input must be
+derived by subtraction:**
+
+```
+fresh_input = max(0, input - cached_input)
+cost = fresh_input * input_rate
+     + cached_input * cache_read_rate
+     + output * output_rate
+```
+
+Charging `input` at the input rate *and* `cached_input` at the cache-read rate —
+as a naive reading of the label set suggests — bills 95% of all Codex tokens
+twice. On this dataset that overstates cost by roughly 7x. `total`,
+`reasoning_output`, `cache_write_input` and `non_cached_input` are excluded:
+the first three are sums or subsets of the three billable types, the last has no
+data.
