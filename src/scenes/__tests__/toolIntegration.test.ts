@@ -178,6 +178,23 @@ describe('coding tool integration contracts', () => {
     }
   });
 
+  it('scopes Codex metrics by provider, since they all carry a populated model label', () => {
+    // Verified against the datasource over 90d: guardian_review has 5 model
+    // values, tool_call 8, sse_event 5 — all gpt-* or codex-auto-review. The
+    // inventory doc's "notable labels" column is a summary, not a schema.
+    const codexQueries = {
+      codexApprovalRate: QUERIES.codexApprovalRate,
+      codexToolCallsByTool: QUERIES.codexToolCallsByTool,
+      codexToolSuccessRate: QUERIES.codexToolSuccessRate,
+      codexSseEvents: QUERIES.codexSseEvents,
+      codexTurnCount: QUERIES.codexTurnCount,
+    };
+
+    for (const [name, query] of Object.entries(codexQueries)) {
+      expect([name, query.includes('${provider:raw}')]).toEqual([name, true]);
+    }
+  });
+
   it('exposes the Codex route for navigation', () => {
     expect(ROUTES.Codex).toBe('codex');
   });
@@ -333,9 +350,24 @@ describe('provider filter application', () => {
   });
 
   it('scopes the group-by-model panels that carry no model filter', () => {
-    for (const query of [QUERIES.costByModel, QUERIES.tokensByModel, QUERIES.sessionsByModel]) {
+    for (const query of [QUERIES.costByModel, QUERIES.tokensByModel]) {
       expect(query).toContain('${provider:raw}');
     }
+  });
+
+  it('keeps sessions grouped by raw model, since session_count has no model label', () => {
+    // claude_code_session_count_total carries no `model` label (0 of 6177
+    // series). Grouping it by provider files every Claude session under the
+    // catch-all, and filtering it by a named provider drops them entirely.
+    expect(QUERIES.sessionsByModel).toContain(`sum by (${LABELS.MODEL})`);
+    expect(QUERIES.sessionsByModel).not.toContain('label_replace(');
+
+    const claudeTerm = QUERIES.sessionsByModel.slice(
+      0,
+      QUERIES.sessionsByModel.indexOf(METRICS.CODEX.THREAD_STARTED)
+    );
+    expect(claudeTerm).toContain(METRICS.CLAUDE_CODE.SESSION_COUNT);
+    expect(claudeTerm).not.toContain('${provider:raw}');
   });
 
   it('keeps the cost table grouped by raw model while still filtering by provider', () => {
@@ -344,14 +376,43 @@ describe('provider filter application', () => {
   });
 
   it('leaves queries over metrics with no model dimension untouched', () => {
-    for (const query of [
-      QUERIES.totalLinesOfCode,
-      QUERIES.totalCommits,
-      QUERIES.totalPullRequests,
-      QUERIES.toolDecisionsByLanguage,
-      QUERIES.usageByOsType,
-    ]) {
-      expect(query).not.toContain(LABELS.PROVIDER);
+    // Per docs/research/2026-06-27-telemetry/03-real-data-inventory.md, these
+    // metrics carry no `model` label: commit_count, pull_request_count,
+    // active_time, code_edit_tool_decision, session_count.
+    const modelless = {
+      totalCommits: QUERIES.totalCommits,
+      totalPullRequests: QUERIES.totalPullRequests,
+      toolDecisionsByLanguage: QUERIES.toolDecisionsByLanguage,
+      totalActiveTime: QUERIES.totalActiveTime,
+      sessionsByTerminalType: QUERIES.sessionsByTerminalType,
+    };
+
+    for (const [name, query] of Object.entries(modelless)) {
+      expect([name, query.includes(LABELS.PROVIDER)]).toEqual([name, false]);
+    }
+  });
+
+  it('scopes cost-backed and lines-of-code queries, which do carry model', () => {
+    // Same inventory: cost_usage carries model on every series, and model is
+    // confirmed present on lines_of_code. Leaving these unscoped made the
+    // Environment page show filtered and unfiltered cost panels side by side.
+    const modelBearing = {
+      usageByOsType: QUERIES.usageByOsType,
+      usageByHostArch: QUERIES.usageByHostArch,
+      usageByTerminalType: QUERIES.usageByTerminalType,
+      usageByServiceVersion: QUERIES.usageByServiceVersion,
+      versionAdoptionOverTime: QUERIES.versionAdoptionOverTime,
+      terminalTypeOverTime: QUERIES.terminalTypeOverTime,
+      usageByDevice: QUERIES.usageByDevice,
+      membersByOsType: QUERIES.membersByOsType,
+      totalLinesOfCode: QUERIES.totalLinesOfCode,
+      linesOfCodeByType: QUERIES.linesOfCodeByType,
+      linesOfCodeByDevice: QUERIES.linesOfCodeByDevice,
+      linesOfCodeOverTime: QUERIES.linesOfCodeOverTime,
+    };
+
+    for (const [name, query] of Object.entries(modelBearing)) {
+      expect([name, query.includes('${provider:raw}')]).toEqual([name, true]);
     }
   });
 });
@@ -416,9 +477,9 @@ describe('model cascade reset', () => {
 });
 
 describe('provider-grouped panels', () => {
-  const regrouped = ['costByModel', 'costOverTime', 'tokensByModel', 'sessionsByModel'] as const;
+  const regrouped = ['costByModel', 'costOverTime', 'tokensByModel'] as const;
 
-  it('aggregates the four by-model panels on provider', () => {
+  it('aggregates the three model-bearing by-model panels on provider', () => {
     for (const name of regrouped) {
       const query = QUERIES[name];
 

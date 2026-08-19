@@ -98,7 +98,7 @@ export function getSessionsScene(
       {
         refId: 'SessionsByModel',
         expr: QUERIES.sessionsByModel,
-        legendFormat: '{{provider}}',
+        legendFormat: '{{model}}',
       },
     ],
   });
@@ -217,7 +217,7 @@ export function getSessionsScene(
             new SceneFlexItem({
               width: '30%',
               body: PanelBuilders.piechart()
-                .setTitle('Sessions by Provider')
+                .setTitle('Sessions by Model')
                 .setUnit('short')
                 .setData(sessionsByModelQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })

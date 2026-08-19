@@ -51,6 +51,11 @@ export const ENV_FILTERS = `${LABELS.JOB}=~"\${coding_tool:raw}", ${LABELS.TERMI
 // The "All" value (.*) still matches missing labels, while narrowed filters
 // exclude unlabeled Codex series so scoped Claude views do not include global Codex data.
 const CODEX_SHARED_FILTER = `${LABELS.JOB}=~"\${coding_tool:raw}", ${LABELS.USER_EMAIL}=~"$member", ${LABELS.TERMINAL_TYPE}=~"\${terminal_type:regex}", ${LABELS.OS_TYPE}=~"\${os_type:regex}", ${LABELS.DEVICE}=~"\${device:regex}"`;
+// Every codex_* metric used here carries a populated `model` label — including
+// guardian_review, tool_call and sse_event, whose values are gpt-* and
+// codex-auto-review. (The "notable labels" column of the telemetry inventory
+// is a summary, not an exhaustive schema; verified directly against the
+// datasource.) So they are all model- and provider-scoped.
 const CODEX_CONTEXT_FILTER = `${CODEX_SHARED_FILTER}, ${LABELS.MODEL}=~"\${model:regex}", ${PROVIDER_FILTER}, ${LABELS.CODEX_ORIGINATOR}=~"\${codex_originator:regex}", ${LABELS.CODEX_SESSION_SOURCE}=~"\${codex_session_source:regex}", ${LABELS.CODEX_OS}=~"\${codex_os:regex}"`;
 
 /**
@@ -133,10 +138,14 @@ export const QUERIES = {
   /** Tokens per session over time */
   sessionIntensityOverTime: `(sum(increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__rate_interval])) or vector(0)) / clamp_min(round(sum(increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]))) or vector(0), 1)`,
 
-  /** Sessions by model */
-  sessionsByModel: `round(sum by (${LABELS.PROVIDER}) (${withProviderLabel(
-    `sum by (${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__range]) or increase(${METRICS.CODEX.THREAD_STARTED}{${CODEX_CONTEXT_FILTER}}[$__range]))`
-  )}))`,
+  /**
+   * Sessions by model. Deliberately NOT grouped by provider:
+   * `claude_code_session_count_total` carries no `model` label at all, so a
+   * positive provider matcher would exclude every Claude session and the
+   * catch-all would swallow them under "Other". Only the Codex side
+   * (thread_started) is model-bearing and provider-scoped.
+   */
+  sessionsByModel: `round(sum by (${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range]) or increase(${METRICS.CODEX.THREAD_STARTED}{${CODEX_CONTEXT_FILTER}}[$__range])))`,
 
   /** Active users over time */
   activeUsersOverTime: `count(count by (${LABELS.USER_EMAIL}) (increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]) > 0))`,
@@ -147,16 +156,16 @@ export const QUERIES = {
   // ==================== PRODUCTIVITY QUERIES ====================
 
   /** Total lines of code (added + removed) */
-  totalLinesOfCode: `round(sum(increase(${METRICS.CLAUDE_CODE.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])))`,
+  totalLinesOfCode: `round(sum(increase(${METRICS.CLAUDE_CODE.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}}[$__range])))`,
 
   /** Lines of code by type (added, removed) */
-  linesOfCodeByType: `round(sum by (${LABELS.LOC_TYPE}) (increase(${METRICS.CLAUDE_CODE.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])))`,
+  linesOfCodeByType: `round(sum by (${LABELS.LOC_TYPE}) (increase(${METRICS.CLAUDE_CODE.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}}[$__range])))`,
 
   /** Lines of code by device */
-  linesOfCodeByDevice: `round(sum by (${LABELS.DEVICE}) (increase(${METRICS.CLAUDE_CODE.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range])))`,
+  linesOfCodeByDevice: `round(sum by (${LABELS.DEVICE}) (increase(${METRICS.CLAUDE_CODE.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}, ${LABELS.DEVICE}!=""}[$__range])))`,
 
   /** Lines of code over time */
-  linesOfCodeOverTime: `round(sum(increase(${METRICS.CLAUDE_CODE.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval])) by (${LABELS.LOC_TYPE}))`,
+  linesOfCodeOverTime: `round(sum(increase(${METRICS.CLAUDE_CODE.LINES_OF_CODE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}}[$__rate_interval])) by (${LABELS.LOC_TYPE}))`,
 
   /** Total commits */
   totalCommits: `round(sum(increase(${METRICS.CLAUDE_CODE.COMMITS}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])))`,
@@ -250,16 +259,16 @@ export const QUERIES = {
   // ==================== ENVIRONMENT QUERIES ====================
 
   /** Usage by OS type (darwin, linux, windows) */
-  usageByOsType: `sum by (${LABELS.OS_TYPE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
+  usageByOsType: `sum by (${LABELS.OS_TYPE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}}[$__range]))`,
 
   /** Usage by host architecture (arm64, x64) */
-  usageByHostArch: `sum by (${LABELS.HOST_ARCH}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
+  usageByHostArch: `sum by (${LABELS.HOST_ARCH}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}}[$__range]))`,
 
   /** Usage by terminal type */
-  usageByTerminalType: `sum by (${LABELS.TERMINAL_TYPE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
+  usageByTerminalType: `sum by (${LABELS.TERMINAL_TYPE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}}[$__range]))`,
 
   /** Usage by service version */
-  usageByServiceVersion: `sum by (${LABELS.SERVICE_VERSION}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
+  usageByServiceVersion: `sum by (${LABELS.SERVICE_VERSION}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}}[$__range]))`,
 
   /** Cost by terminal type */
   costByTerminalType: `sum by (${LABELS.TERMINAL_TYPE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__range]))`,
@@ -268,19 +277,19 @@ export const QUERIES = {
   sessionsByTerminalType: `round(sum by (${LABELS.TERMINAL_TYPE}) (increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])))`,
 
   /** Members by OS type */
-  membersByOsType: `count by (${LABELS.OS_TYPE}) (count by (${LABELS.USER_EMAIL}, ${LABELS.OS_TYPE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) > 0))`,
+  membersByOsType: `count by (${LABELS.OS_TYPE}) (count by (${LABELS.USER_EMAIL}, ${LABELS.OS_TYPE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}}[$__range]) > 0))`,
 
   /** Cost by OS type */
   costByOsType: `sum by (${LABELS.OS_TYPE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__range]))`,
 
   /** Version adoption over time */
-  versionAdoptionOverTime: `sum(increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval])) by (${LABELS.SERVICE_VERSION})`,
+  versionAdoptionOverTime: `sum(increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}}[$__rate_interval])) by (${LABELS.SERVICE_VERSION})`,
 
   /** Terminal type usage over time */
-  terminalTypeOverTime: `sum(increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval])) by (${LABELS.TERMINAL_TYPE})`,
+  terminalTypeOverTime: `sum(increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}}[$__rate_interval])) by (${LABELS.TERMINAL_TYPE})`,
 
   /** Usage by device */
-  usageByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range]))`,
+  usageByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}, ${LABELS.DEVICE}!=""}[$__range]))`,
 
   /** Cost by device (environment scene — includes member filter) */
   costByDeviceEnv: `sum by (${LABELS.DEVICE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range]))`,
