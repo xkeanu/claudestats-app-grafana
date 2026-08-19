@@ -5,14 +5,14 @@ import {
   SceneQueryRunner,
   SceneTimeRange,
   SceneVariableSet,
-  PanelBuilders,
   VariableValueSelectors,
   SceneControlsSpacer,
   SceneTimePicker,
   SceneRefreshPicker,
 } from '@grafana/scenes';
-import { LegendDisplayMode, StackingMode } from '@grafana/schema';
+import { StackingMode } from '@grafana/schema';
 import { QUERIES } from '../queries';
+import { barPanel, piePanel, timeseriesPanel } from '../viz/panels';
 import { LABELS, PANEL_HEIGHTS } from '../../constants';
 
 export function getEnvironmentScene(
@@ -214,39 +214,33 @@ export function getEnvironmentScene(
           children: [
             new SceneFlexItem({
               width: '25%',
-              body: PanelBuilders.piechart()
-                .setTitle('Claude OS Distribution')
-                .setData(usageByOsTypeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
-                .setOption('pieType', 'donut' as never)
-                .build(),
+              // Stays a pie: `os_type` is a bounded three-value set.
+              body: piePanel({ title: 'Claude OS Distribution', quantity: 'count', data: usageByOsTypeQuery }).build(),
             }),
             new SceneFlexItem({
               width: '25%',
-              body: PanelBuilders.piechart()
-                .setTitle('Claude Architecture')
-                .setData(usageByHostArchQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
-                .setOption('pieType', 'donut' as never)
-                .build(),
+              // Stays a pie: `host_arch` is a bounded set.
+              body: piePanel({ title: 'Claude Architecture', quantity: 'count', data: usageByHostArchQuery }).build(),
             }),
             new SceneFlexItem({
               width: '25%',
-              body: PanelBuilders.piechart()
-                .setTitle('Claude IDE / Terminal')
-                .setData(usageByTerminalTypeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
-                .setOption('pieType', 'donut' as never)
-                .build(),
+              // Converts pie -> bar: `terminal_type` takes the default bar limit.
+              body: barPanel({
+                title: 'Claude IDE / Terminal',
+                quantity: 'count',
+                data: usageByTerminalTypeQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
             new SceneFlexItem({
               width: '25%',
-              body: PanelBuilders.piechart()
-                .setTitle('Claude Code Version')
-                .setData(usageByServiceVersionQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
-                .setOption('pieType', 'donut' as never)
-                .build(),
+              // Converts pie -> bar: `service_version` grows without bound as releases ship.
+              body: barPanel({
+                title: 'Claude Code Version',
+                quantity: 'count',
+                data: usageByServiceVersionQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
           ],
         }),
@@ -257,39 +251,28 @@ export function getEnvironmentScene(
           children: [
             new SceneFlexItem({
               width: '25%',
-              body: PanelBuilders.piechart()
-                .setTitle('Codex OS')
-                .setData(codexUsageByOsQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
-                .setOption('pieType', 'donut' as never)
-                .build(),
+              // Stays a pie: Codex `os` is a bounded set.
+              body: piePanel({ title: 'Codex OS', quantity: 'count', data: codexUsageByOsQuery }).build(),
             }),
             new SceneFlexItem({
               width: '25%',
-              body: PanelBuilders.piechart()
-                .setTitle('Codex Originator')
-                .setData(codexUsageByOriginatorQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
-                .setOption('pieType', 'donut' as never)
-                .build(),
+              // Stays a pie: Codex `originator` is a bounded set.
+              body: piePanel({ title: 'Codex Originator', quantity: 'count', data: codexUsageByOriginatorQuery }).build(),
             }),
             new SceneFlexItem({
               width: '25%',
-              body: PanelBuilders.piechart()
-                .setTitle('Codex Source')
-                .setData(codexUsageBySessionSourceQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
-                .setOption('pieType', 'donut' as never)
-                .build(),
+              // Stays a pie: Codex `session_source` is a bounded set.
+              body: piePanel({ title: 'Codex Source', quantity: 'count', data: codexUsageBySessionSourceQuery }).build(),
             }),
             new SceneFlexItem({
               width: '25%',
-              body: PanelBuilders.piechart()
-                .setTitle('Codex App Version')
-                .setData(codexUsageByAppVersionQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
-                .setOption('pieType', 'donut' as never)
-                .build(),
+              // Converts pie -> bar: Codex `app_version` grows without bound as releases ship.
+              body: barPanel({
+                title: 'Codex App Version',
+                quantity: 'count',
+                data: codexUsageByAppVersionQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
           ],
         }),
@@ -300,21 +283,23 @@ export function getEnvironmentScene(
           children: [
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.piechart()
-                .setTitle('Claude Usage by Device')
-                .setData(usageByDeviceQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
-                .setOption('pieType', 'donut' as never)
-                .build(),
+              // Converts pie -> bar: `device` grows with the team.
+              body: barPanel({
+                title: 'Claude Usage by Device',
+                quantity: 'count',
+                data: usageByDeviceQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.piechart()
-                .setTitle('Claude Cost by Device')
-                .setUnit('currencyUSD')
-                .setData(costByDeviceQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
-                .build(),
+              // Converts pie -> bar: `device` grows with the team.
+              body: barPanel({
+                title: 'Claude Cost by Device',
+                quantity: 'cost',
+                data: costByDeviceQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
           ],
         }),
@@ -325,21 +310,18 @@ export function getEnvironmentScene(
           children: [
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.piechart()
-                .setTitle('Claude Cost by IDE / Terminal')
-                .setUnit('currencyUSD')
-                .setData(costByTerminalTypeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
-                .build(),
+              // Converts pie -> bar: A ranked comparison over `terminal_type`.
+              body: barPanel({
+                title: 'Claude Cost by IDE / Terminal',
+                quantity: 'cost',
+                data: costByTerminalTypeQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.piechart()
-                .setTitle('Claude Cost by OS')
-                .setUnit('currencyUSD')
-                .setData(costByOsTypeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
-                .build(),
+              // Stays a pie: `os_type` is a bounded three-value set.
+              body: piePanel({ title: 'Claude Cost by OS', quantity: 'cost', data: costByOsTypeQuery }).build(),
             }),
           ],
         }),
@@ -350,22 +332,26 @@ export function getEnvironmentScene(
           children: [
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Claude IDE / Terminal Over Time')
-                .setUnit('short')
-                .setData(terminalTypeOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Clustered on `terminal_type`.
+              body: timeseriesPanel({
+                title: 'Claude IDE / Terminal Over Time',
+                quantity: 'count',
+                data: terminalTypeOverTimeQuery,
+                cluster: { mode: 'additive' },
+              })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 20)
                 .build(),
             }),
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Claude Version Adoption Over Time')
-                .setUnit('short')
-                .setData(versionAdoptionOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Clustered on `service_version`.
+              body: timeseriesPanel({
+                title: 'Claude Version Adoption Over Time',
+                quantity: 'count',
+                data: versionAdoptionOverTimeQuery,
+                cluster: { mode: 'additive' },
+              })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 20)
                 .build(),
@@ -379,22 +365,26 @@ export function getEnvironmentScene(
           children: [
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Codex Originator Over Time')
-                .setUnit('short')
-                .setData(codexOriginatorOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Clustered on `originator`.
+              body: timeseriesPanel({
+                title: 'Codex Originator Over Time',
+                quantity: 'count',
+                data: codexOriginatorOverTimeQuery,
+                cluster: { mode: 'additive' },
+              })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 20)
                 .build(),
             }),
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Codex Version Over Time')
-                .setUnit('short')
-                .setData(codexVersionOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Clustered on `app_version`.
+              body: timeseriesPanel({
+                title: 'Codex Version Over Time',
+                quantity: 'count',
+                data: codexVersionOverTimeQuery,
+                cluster: { mode: 'additive' },
+              })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
                 .setCustomFieldConfig('fillOpacity', 20)
                 .build(),
