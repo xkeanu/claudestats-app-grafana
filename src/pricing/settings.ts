@@ -30,3 +30,20 @@ export function resolvePriceSettings(jsonData?: Partial<ClaudeStatsSettings>): R
     priceFeedUrl: savedUrl === '' ? DEFAULT_PRICE_FEED_URL : savedUrl,
   };
 }
+
+/**
+ * Plugin settings captured at app root render, so scene builders can read them
+ * without threading props through every page.
+ *
+ * `AppPluginConfig` in `@grafana/runtime`'s `config.apps` carries no
+ * `jsonData`, so the app root is the only place these are available.
+ */
+let pluginSettings: ResolvedPriceSettings = resolvePriceSettings(undefined);
+
+export function setPluginSettings(jsonData?: Partial<ClaudeStatsSettings>): void {
+  pluginSettings = resolvePriceSettings(jsonData);
+}
+
+export function getPluginSettings(): ResolvedPriceSettings {
+  return pluginSettings;
+}
