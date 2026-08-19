@@ -5,18 +5,13 @@ import {
   SceneQueryRunner,
   SceneTimeRange,
   SceneVariableSet,
-  PanelBuilders,
   VariableValueSelectors,
   SceneControlsSpacer,
   SceneTimePicker,
   SceneRefreshPicker,
 } from '@grafana/scenes';
-import {
-  BigValueGraphMode,
-  LegendDisplayMode,
-  LineInterpolation,
-  StackingMode,
-} from '@grafana/schema';
+import { BigValueGraphMode, LineInterpolation, StackingMode } from '@grafana/schema';
+import { barPanel, piePanel, statPanel, timeseriesPanel } from '../viz/panels';
 import { QUERIES } from '../queries';
 import { PANEL_HEIGHTS } from '../../constants';
 
@@ -126,38 +121,38 @@ export function getTokensScene(
           height: PANEL_HEIGHTS.STAT,
           children: [
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Total Tokens')
-                .setUnit('short')
-                .setData(totalTokensQuery)
+              body: statPanel({ title: 'Total Tokens', quantity: 'tokens', data: totalTokensQuery })
                 .setOption('graphMode', BigValueGraphMode.Area)
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Input Tokens')
-                .setUnit('short')
-                .setData(inputTokensQuery)
+              body: statPanel({
+                title: 'Input Tokens',
+                quantity: 'tokens',
+                data: inputTokensQuery,
+                color: { fixedColor: 'blue', mode: 'fixed' },
+              })
                 .setOption('graphMode', BigValueGraphMode.None)
-                .setColor({ fixedColor: 'blue', mode: 'fixed' })
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Output Tokens')
-                .setUnit('short')
-                .setData(outputTokensQuery)
+              body: statPanel({
+                title: 'Output Tokens',
+                quantity: 'tokens',
+                data: outputTokensQuery,
+                color: { fixedColor: 'green', mode: 'fixed' },
+              })
                 .setOption('graphMode', BigValueGraphMode.None)
-                .setColor({ fixedColor: 'green', mode: 'fixed' })
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Cache Read')
-                .setUnit('short')
-                .setData(cacheReadTokensQuery)
+              body: statPanel({
+                title: 'Cache Read',
+                quantity: 'tokens',
+                data: cacheReadTokensQuery,
+                color: { fixedColor: 'purple', mode: 'fixed' },
+              })
                 .setOption('graphMode', BigValueGraphMode.None)
-                .setColor({ fixedColor: 'purple', mode: 'fixed' })
                 .build(),
             }),
           ],
@@ -169,23 +164,23 @@ export function getTokensScene(
           children: [
             new SceneFlexItem({
               width: '35%',
-              body: PanelBuilders.piechart()
-                .setTitle('Token Distribution by Type')
-                .setUnit('short')
-                .setData(tokensByTypeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
-                .setOption('pieType', 'donut' as never)
-                .build(),
+              // Stays a pie: token `type` is a bounded four-value set and the
+              // question is part-to-whole.
+              body: piePanel({
+                title: 'Token Distribution by Type',
+                quantity: 'tokens',
+                data: tokensByTypeQuery,
+              }).build(),
             }),
             new SceneFlexItem({
               width: '65%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Token Usage Over Time')
-                .setUnit('short')
-                .setData(tokensOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Not clustered: grouped by the bounded token `type`.
+              body: timeseriesPanel({
+                title: 'Token Usage Over Time',
+                quantity: 'tokens',
+                data: tokensOverTimeQuery,
+              })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
-                .setCustomFieldConfig('fillOpacity', 30)
                 .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
@@ -198,21 +193,18 @@ export function getTokensScene(
           children: [
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.piechart()
-                .setTitle('Tokens by Provider')
-                .setUnit('short')
-                .setData(tokensByModelQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
-                .build(),
+              // Stays a pie: `provider` is the bounded CAG-3 family set.
+              body: piePanel({ title: 'Tokens by Provider', quantity: 'tokens', data: tokensByModelQuery }).build(),
             }),
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.piechart()
-                .setTitle('Claude Tokens by Device')
-                .setUnit('short')
-                .setData(tokensByDeviceQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
-                .build(),
+              // Ranked comparison over an unbounded dimension: bar, clustered.
+              body: barPanel({
+                title: 'Claude Tokens by Device',
+                quantity: 'tokens',
+                data: tokensByDeviceQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
           ],
         }),
