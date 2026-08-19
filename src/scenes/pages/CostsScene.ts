@@ -6,6 +6,7 @@ import {
   SceneTimeRange,
   SceneVariableSet,
   PanelBuilders,
+  SceneDataTransformer,
   VariableValueSelectors,
   SceneControlsSpacer,
   SceneTimePicker,
@@ -14,6 +15,11 @@ import {
 import { BigValueGraphMode, LegendDisplayMode, LineInterpolation, StackingMode } from '@grafana/schema';
 import { QUERIES } from '../queries';
 import { PANEL_HEIGHTS } from '../../constants';
+import { makeBlendedCostTransformation } from '../../pricing/costTransformation';
+
+/** Panels that break cost down by a label Codex does not emit cannot meaningfully blend. */
+const CLAUDE_ONLY_NOTE =
+  'CLAUDE CODE ONLY — Codex does not emit this dimension, so its spend is absent from this panel. See the Codex tab for Codex cost.';
 
 export function getCostsScene(
   timeRange: SceneTimeRange,
@@ -26,7 +32,17 @@ export function getCostsScene(
         refId: 'TotalCost',
         expr: QUERIES.totalCost,
       },
+      {
+        refId: 'CodexTokensByModelAndType',
+        expr: QUERIES.codexTokensByModelAndType,
+      },
     ],
+  });
+
+  // Claude's measured cost plus the Codex estimate.
+  const blendedCostData = new SceneDataTransformer({
+    $data: totalCostQuery,
+    transformations: [makeBlendedCostTransformation()],
   });
 
   const costByModelQuery = new SceneQueryRunner({
@@ -105,9 +121,10 @@ export function getCostsScene(
             new SceneFlexItem({
               width: '30%',
               body: PanelBuilders.stat()
-                .setTitle('Total Cost')
+                .setTitle('Total Cost *')
+                .setDescription('* INCLUDES AN ESTIMATED COMPONENT. Claude cost is measured. Codex emits no cost metric, so its spend is ESTIMATED from token counts times a published price table — see the Codex tab for the estimate, its as-of date and unpriced token volume.')
                 .setUnit('currencyUSD')
-                .setData(totalCostQuery)
+                .setData(blendedCostData)
                 .setOption('graphMode', BigValueGraphMode.Area)
                 .setColor({ mode: 'thresholds' })
                 .build(),
@@ -116,6 +133,7 @@ export function getCostsScene(
               width: '70%',
               body: PanelBuilders.piechart()
                 .setTitle('Cost by Provider')
+                .setDescription(CLAUDE_ONLY_NOTE)
                 .setUnit('currencyUSD')
                 .setData(costByModelQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
@@ -133,6 +151,7 @@ export function getCostsScene(
               width: '50%',
               body: PanelBuilders.timeseries()
                 .setTitle('Cost Over Time by Provider')
+                .setDescription(CLAUDE_ONLY_NOTE)
                 .setUnit('currencyUSD')
                 .setData(costOverTimeQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
@@ -145,6 +164,7 @@ export function getCostsScene(
               width: '50%',
               body: PanelBuilders.timeseries()
                 .setTitle('Cost Over Time by Device')
+                .setDescription(CLAUDE_ONLY_NOTE)
                 .setUnit('currencyUSD')
                 .setData(costOverTimeByDeviceQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
@@ -164,6 +184,7 @@ export function getCostsScene(
               width: '40%',
               body: PanelBuilders.piechart()
                 .setTitle('Cost Distribution by Device')
+                .setDescription(CLAUDE_ONLY_NOTE)
                 .setUnit('currencyUSD')
                 .setData(costByDeviceQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
@@ -174,6 +195,7 @@ export function getCostsScene(
               width: '60%',
               body: PanelBuilders.table()
                 .setTitle('Cost Breakdown by Device')
+                .setDescription(CLAUDE_ONLY_NOTE)
                 .setData(costTableQuery)
                 .setOption('sortBy', [{ displayName: 'Value', desc: true }])
                 .setOverrides((b) =>

@@ -10,10 +10,20 @@ import {
   SceneVariableSet,
   VariableValueSelectors,
   PanelBuilders,
+  SceneDataTransformer,
 } from '@grafana/scenes';
-import { BigValueGraphMode, LegendDisplayMode, LineInterpolation, StackingMode } from '@grafana/schema';
+import { BigValueGraphMode, BigValueTextMode, LegendDisplayMode, LineInterpolation, StackingMode } from '@grafana/schema';
 import { LABELS, PANEL_HEIGHTS } from '../../constants';
 import { QUERIES } from '../queries';
+import { makeCostTransformation } from '../../pricing/costTransformation';
+
+/**
+ * Codex emits no cost metric, so cost is derived: tokens x a published price
+ * table, applied client-side. Every figure downstream of this is an ESTIMATE
+ * and is labelled as one — see AGENTS.md, "Estimated Codex cost".
+ */
+const ESTIMATE_NOTE =
+  'ESTIMATE — Codex emits no cost metric. Derived from token counts times a published price table, so it will not match an invoice.';
 
 export function getCodexScene(timeRange: SceneTimeRange, variables: SceneVariableSet): EmbeddedScene {
   const totalTokensQuery = new SceneQueryRunner({
@@ -62,6 +72,28 @@ export function getCodexScene(timeRange: SceneTimeRange, variables: SceneVariabl
       { refId: 'CodexApiRequestsOverTime', expr: QUERIES.codexApiRequestsOverTime, legendFormat: 'API Requests' },
       { refId: 'CodexSseEventsOverTime', expr: QUERIES.codexSseEventsOverTime, legendFormat: 'SSE Events' },
     ],
+  });
+
+  const tokensByModelAndTypeQuery = new SceneQueryRunner({
+    datasource: { type: 'prometheus', uid: '${prometheus_ds}' },
+    queries: [{ refId: 'CodexTokensByModelAndType', expr: QUERIES.codexTokensByModelAndType }],
+  });
+
+  // One query runner, three views of it. The price table behind them is
+  // memoised, so this is one resolution and — with live refresh on — one fetch.
+  const estimatedCostData = new SceneDataTransformer({
+    $data: tokensByModelAndTypeQuery,
+    transformations: [makeCostTransformation('cost')],
+  });
+
+  const unpricedTokensData = new SceneDataTransformer({
+    $data: tokensByModelAndTypeQuery,
+    transformations: [makeCostTransformation('unpriced')],
+  });
+
+  const priceProvenanceData = new SceneDataTransformer({
+    $data: tokensByModelAndTypeQuery,
+    transformations: [makeCostTransformation('provenance')],
   });
 
   return new EmbeddedScene({
@@ -129,6 +161,53 @@ export function getCodexScene(timeRange: SceneTimeRange, variables: SceneVariabl
                 .setUnit('short')
                 .setData(turnCountQuery)
                 .setOption('graphMode', BigValueGraphMode.None)
+                .build(),
+            }),
+          ],
+        }),
+        new SceneFlexLayout({
+          direction: 'row',
+          height: PANEL_HEIGHTS.STAT,
+          children: [
+            new SceneFlexItem({
+              body: PanelBuilders.stat()
+                .setTitle('Estimated Codex Cost')
+                .setDescription(
+                  `${ESTIMATE_NOTE} Cached input is charged at the cache-read rate; models absent from the price table contribute nothing and are counted under Unpriced Tokens.`
+                )
+                .setUnit('currencyUSD')
+                .setData(estimatedCostData)
+                .setOption('graphMode', BigValueGraphMode.None)
+                // Fixed purple rather than the thresholds colouring the measured
+                // Claude cost stats use, so an estimate never reads as measured.
+                .setColor({ mode: 'fixed', fixedColor: 'purple' })
+                .build(),
+            }),
+            new SceneFlexItem({
+              body: PanelBuilders.stat()
+                .setTitle('Unpriced Tokens')
+                .setDescription(
+                  'Billable Codex tokens belonging to models the price table cannot price (for example codex-auto-review, which is not an OpenAI catalogue model). These contribute nothing to the estimate, so a non-zero figure here means the estimate is understated.'
+                )
+                .setUnit('short')
+                .setData(unpricedTokensData)
+                .setOption('graphMode', BigValueGraphMode.None)
+                .setColor({ mode: 'fixed', fixedColor: 'text' })
+                .build(),
+            }),
+            new SceneFlexItem({
+              body: PanelBuilders.stat()
+                .setTitle('Price Table')
+                .setDescription(
+                  'Which price table produced the estimate, and its as-of date. "Refresh failed" means live refresh is enabled but the feed could not be used, so the bundled table was substituted.'
+                )
+                .setData(priceProvenanceData)
+                .setOption('graphMode', BigValueGraphMode.None)
+                // A stat panel reduces numeric fields only by default, so a
+                // text-valued field renders as "No data" without this.
+                .setOption('reduceOptions', { calcs: ['lastNotNull'], fields: '/.*/', values: false })
+                .setOption('textMode', BigValueTextMode.Value)
+                .setColor({ mode: 'fixed', fixedColor: 'text' })
                 .build(),
             }),
           ],

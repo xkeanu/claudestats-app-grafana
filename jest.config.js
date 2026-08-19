@@ -23,5 +23,7 @@ module.exports = {
     '\\.(svg|png|jpg|jpeg|gif)$': '<rootDir>/src/__mocks__/fileMock.js',
   },
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
-  transformIgnorePatterns: ['node_modules/(?!(@grafana)/)'],
+  // @grafana/data pulls in ESM-only transitive deps (marked, and its own
+  // uuid/ol chain); they must be transformed rather than ignored.
+  transformIgnorePatterns: ['node_modules/(?!(@grafana|marked|uuid|@braintree|d3|d3-.*|internmap|delaunator|robust-predicates|ol|rbush|quickselect|earcut|pbf|geotiff|color-.*|nanoid)/)'],
 };

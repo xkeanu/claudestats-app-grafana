@@ -18,10 +18,13 @@ import {
   ClipboardButton,
   Icon,
   Badge,
+  Switch,
 } from '@grafana/ui';
 import { css } from '@emotion/css';
 import { ClaudeStatsSettings } from '../types';
 import { PLUGIN_BASE_URL } from '../constants';
+import { DEFAULT_PRICE_FEED_URL, ResolvedPriceSettings, resolvePriceSettings } from '../pricing/settings';
+import priceSnapshot from '../pricing/price-snapshot.json';
 
 export interface AppConfigProps extends PluginConfigPageProps<AppPluginMeta<ClaudeStatsSettings>> {}
 
@@ -32,13 +35,17 @@ interface SetupConfig {
 
 export function AppConfig({ plugin }: AppConfigProps) {
   const styles = useStyles2(getStyles);
-  const { enabled } = plugin.meta;
+  const { enabled, jsonData } = plugin.meta;
   const [isEnabled] = useState(enabled);
   const [activeTab, setActiveTab] = useState('setup');
   const [setupConfig, setSetupConfig] = useState<SetupConfig>({
     otlpEndpoint: '',
     otlpToken: '',
   });
+
+  const savedPricing = resolvePriceSettings(jsonData);
+  const [pricing, setPricing] = useState<ResolvedPriceSettings>(savedPricing);
+  const [isSavingPricing, setIsSavingPricing] = useState(false);
 
   const updatePluginAndReload = async (pluginId: string, data: Partial<PluginMeta>) => {
     try {
@@ -49,12 +56,35 @@ export function AppConfig({ plugin }: AppConfigProps) {
     }
   };
 
+  /**
+   * The settings endpoint replaces `jsonData` wholesale, so every write must
+   * start from what is already stored. Posting a bare literal here would
+   * silently destroy provisioned keys such as `teamMembers`.
+   */
+  const mergeJsonData = (changes: Partial<ClaudeStatsSettings>): ClaudeStatsSettings => ({
+    ...(jsonData ?? {}),
+    ...changes,
+  });
+
   const onEnable = () => {
     updatePluginAndReload(plugin.meta.id, {
       enabled: true,
       pinned: true,
-      jsonData: {},
+      jsonData: mergeJsonData({}),
     });
+  };
+
+  const onSavePricing = async () => {
+    setIsSavingPricing(true);
+    await updatePluginAndReload(plugin.meta.id, {
+      enabled: true,
+      pinned: plugin.meta.pinned,
+      jsonData: mergeJsonData({
+        priceRefreshEnabled: pricing.priceRefreshEnabled,
+        priceFeedUrl: pricing.priceFeedUrl.trim() === DEFAULT_PRICE_FEED_URL ? undefined : pricing.priceFeedUrl.trim(),
+      }),
+    });
+    setIsSavingPricing(false);
   };
 
   const onDisable = () => {
@@ -93,6 +123,7 @@ export OTEL_METRIC_EXPORT_INTERVAL=60000
 
   const tabs = [
     { label: 'Setup Guide', value: 'setup', icon: 'rocket' as const },
+    { label: 'Pricing', value: 'pricing', icon: 'dollar-alt' as const },
     { label: 'Troubleshooting', value: 'troubleshooting', icon: 'bug' as const },
   ];
 
@@ -268,6 +299,62 @@ metrics_exporter = "otlp-http" # or "otlp-grpc"`}
                 <Alert title="Next Step" severity="success">
                   Once configured, data should appear within a few minutes. Team members will be identified by their email address automatically.
                 </Alert>
+              </VerticalGroup>
+            )}
+
+            {activeTab === 'pricing' && (
+              <VerticalGroup spacing="lg">
+                <Alert title="Codex cost is estimated, not measured" severity="info">
+                  Codex emits no cost metric, only token counts. Its dollar figures are derived by
+                  multiplying tokens by a published price table and are always labelled as estimates.
+                  Claude Code figures are measured and unaffected by anything on this tab.
+                </Alert>
+
+                <Card>
+                  <Card.Heading>Bundled price table</Card.Heading>
+                  <Card.Description>
+                    <p>
+                      Prices ship with the plugin, so the dashboard works offline and a price change
+                      arrives as a reviewed release rather than a silent shift.
+                    </p>
+                    <p>
+                      Currently bundled: <strong>{Object.keys(priceSnapshot.models).length} models</strong>,
+                      as of <strong>{priceSnapshot.asOf}</strong>.
+                    </p>
+                  </Card.Description>
+                </Card>
+
+                <Card>
+                  <Card.Heading>Live refresh</Card.Heading>
+                  <Card.Description>
+                    <VerticalGroup spacing="md">
+                      <Field
+                        label="Refresh prices from a live feed"
+                        description="Off by default. While off, the plugin makes no outbound request for price data at all. If the feed is unreachable or malformed, the bundled table is used and panels say so."
+                      >
+                        <Switch
+                          value={pricing.priceRefreshEnabled}
+                          onChange={(e) =>
+                            setPricing({ ...pricing, priceRefreshEnabled: e.currentTarget.checked })
+                          }
+                        />
+                      </Field>
+                      <Field label="Price feed URL" description="Must serve LiteLLM's model_prices_and_context_window.json schema.">
+                        <Input
+                          placeholder={DEFAULT_PRICE_FEED_URL}
+                          value={pricing.priceFeedUrl}
+                          disabled={!pricing.priceRefreshEnabled}
+                          onChange={(e) => setPricing({ ...pricing, priceFeedUrl: e.currentTarget.value })}
+                        />
+                      </Field>
+                      <div className={styles.buttonRow}>
+                        <Button variant="primary" onClick={onSavePricing} disabled={isSavingPricing}>
+                          {isSavingPricing ? 'Saving...' : 'Save pricing settings'}
+                        </Button>
+                      </div>
+                    </VerticalGroup>
+                  </Card.Description>
+                </Card>
               </VerticalGroup>
             )}
 

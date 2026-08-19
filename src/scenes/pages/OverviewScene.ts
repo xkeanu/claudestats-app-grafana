@@ -6,6 +6,7 @@ import {
   SceneTimeRange,
   SceneVariableSet,
   PanelBuilders,
+  SceneDataTransformer,
   VariableValueSelectors,
   SceneControlsSpacer,
   SceneTimePicker,
@@ -13,6 +14,11 @@ import {
 } from '@grafana/scenes';
 import { BigValueGraphMode, LegendDisplayMode, LineInterpolation, StackingMode } from '@grafana/schema';
 import { QUERIES } from '../queries';
+import { makeBlendedCostTransformation } from '../../pricing/costTransformation';
+
+/** Panels that break cost down by a label Codex does not emit cannot meaningfully blend. */
+const CLAUDE_ONLY_NOTE =
+  'CLAUDE CODE ONLY — Codex does not emit this dimension, so its spend is absent from this panel. See the Codex tab for Codex cost.';
 import { PANEL_HEIGHTS } from '../../constants';
 
 export function getOverviewScene(
@@ -27,7 +33,19 @@ export function getOverviewScene(
         refId: 'TotalCost',
         expr: QUERIES.totalCost,
       },
+      {
+        refId: 'CodexTokensByModelAndType',
+        expr: QUERIES.codexTokensByModelAndType,
+      },
     ],
+  });
+
+  // Claude's measured cost plus the Codex estimate. Token counts were already
+  // dual-tool while cost was Claude-only, so every dollar of Codex spend read
+  // as $0 next to a dual-tool token figure.
+  const blendedCostData = new SceneDataTransformer({
+    $data: totalCostQuery,
+    transformations: [makeBlendedCostTransformation()],
   });
 
   const totalTokensQuery = new SceneQueryRunner({
@@ -123,9 +141,10 @@ export function getOverviewScene(
           children: [
             new SceneFlexItem({
               body: PanelBuilders.stat()
-                .setTitle('Claude Cost')
+                .setTitle('Total Cost *')
+                .setDescription(`* INCLUDES AN ESTIMATED COMPONENT. Claude cost is measured. Codex emits no cost metric, so its spend is ESTIMATED from token counts times a published price table — see the Codex tab for the estimate, its as-of date and unpriced token volume.`)
                 .setUnit('currencyUSD')
-                .setData(totalCostQuery)
+                .setData(blendedCostData)
                 .setColor({ mode: 'thresholds' })
                 .setOption('graphMode', BigValueGraphMode.None)
                 .build(),
@@ -165,6 +184,7 @@ export function getOverviewScene(
               width: '60%',
               body: PanelBuilders.timeseries()
                 .setTitle('Claude Cost Over Time')
+                .setDescription(CLAUDE_ONLY_NOTE)
                 .setUnit('currencyUSD')
                 .setData(costOverTimeQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
@@ -175,6 +195,7 @@ export function getOverviewScene(
               width: '40%',
               body: PanelBuilders.piechart()
                 .setTitle('Claude Cost by Device')
+                .setDescription(CLAUDE_ONLY_NOTE)
                 .setUnit('currencyUSD')
                 .setData(costByDeviceQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
