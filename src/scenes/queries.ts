@@ -51,7 +51,7 @@ export const ENV_FILTERS = `${LABELS.JOB}=~"\${coding_tool:raw}", ${LABELS.TERMI
 // The "All" value (.*) still matches missing labels, while narrowed filters
 // exclude unlabeled Codex series so scoped Claude views do not include global Codex data.
 const CODEX_SHARED_FILTER = `${LABELS.JOB}=~"\${coding_tool:raw}", ${LABELS.USER_EMAIL}=~"$member", ${LABELS.TERMINAL_TYPE}=~"\${terminal_type:regex}", ${LABELS.OS_TYPE}=~"\${os_type:regex}", ${LABELS.DEVICE}=~"\${device:regex}"`;
-const CODEX_CONTEXT_FILTER = `${CODEX_SHARED_FILTER}, ${LABELS.MODEL}=~"\${model:regex}", ${LABELS.CODEX_ORIGINATOR}=~"\${codex_originator:regex}", ${LABELS.CODEX_SESSION_SOURCE}=~"\${codex_session_source:regex}", ${LABELS.CODEX_OS}=~"\${codex_os:regex}"`;
+const CODEX_CONTEXT_FILTER = `${CODEX_SHARED_FILTER}, ${LABELS.MODEL}=~"\${model:regex}", ${PROVIDER_FILTER}, ${LABELS.CODEX_ORIGINATOR}=~"\${codex_originator:regex}", ${LABELS.CODEX_SESSION_SOURCE}=~"\${codex_session_source:regex}", ${LABELS.CODEX_OS}=~"\${codex_os:regex}"`;
 
 /**
  * PromQL query builders for Claude Code and Codex metrics
@@ -64,45 +64,45 @@ export const QUERIES = {
   // ==================== COST QUERIES ====================
 
   /** Total cost across all users/models (time-range aware) */
-  totalCost: `sum(increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range]))`,
+  totalCost: `sum(increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__range]))`,
 
   /** Cost breakdown by model */
-  costByModel: `sum by (${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
+  costByModel: `sum by (${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}}[$__range]))`,
 
   /** Cost breakdown by device */
-  costByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range]))`,
+  costByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range]))`,
 
   /** Cost over time (rate) */
-  costOverTime: `sum(increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__rate_interval])) by (${LABELS.MODEL})`,
+  costOverTime: `sum(increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__rate_interval])) by (${LABELS.MODEL})`,
 
   /** Cost over time by device */
-  costOverTimeByDevice: `sum(increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__rate_interval])) by (${LABELS.DEVICE})`,
+  costOverTimeByDevice: `sum(increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__rate_interval])) by (${LABELS.DEVICE})`,
 
   // ==================== TOKEN QUERIES ====================
 
   /** Total tokens (all types) */
-  totalTokens: `(sum(increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range])) or vector(0)) + (sum(increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}="total"}[$__range])) or vector(0))`,
+  totalTokens: `(sum(increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__range])) or vector(0)) + (sum(increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}="total"}[$__range])) or vector(0))`,
 
   /** Input tokens across supported coding tools */
-  inputTokens: `(sum(increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${LABELS.TOKEN_TYPE}="input", ${ENV_FILTERS}}[$__range])) or vector(0)) + (sum(increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}="input"}[$__range])) or vector(0))`,
+  inputTokens: `(sum(increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${LABELS.TOKEN_TYPE}="input", ${ENV_FILTERS}}[$__range])) or vector(0)) + (sum(increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}="input"}[$__range])) or vector(0))`,
 
   /** Output tokens across supported coding tools */
-  outputTokens: `(sum(increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${LABELS.TOKEN_TYPE}="output", ${ENV_FILTERS}}[$__range])) or vector(0)) + (sum(increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}="output"}[$__range])) or vector(0))`,
+  outputTokens: `(sum(increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${LABELS.TOKEN_TYPE}="output", ${ENV_FILTERS}}[$__range])) or vector(0)) + (sum(increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}="output"}[$__range])) or vector(0))`,
 
   /** Cache-read tokens across supported coding tools */
-  cacheReadTokens: `(sum(increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${LABELS.TOKEN_TYPE}="cacheRead", ${ENV_FILTERS}}[$__range])) or vector(0)) + (sum(increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}="cached_input"}[$__range])) or vector(0))`,
+  cacheReadTokens: `(sum(increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${LABELS.TOKEN_TYPE}="cacheRead", ${ENV_FILTERS}}[$__range])) or vector(0)) + (sum(increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}="cached_input"}[$__range])) or vector(0))`,
 
   /** Tokens by type (input, output, cacheRead, cacheCreation) */
-  tokensByType: `sum by (${LABELS.TOKEN_TYPE}) (increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range]) or label_replace(increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}!="total"}[$__range]), "${LABELS.TOKEN_TYPE}", "$1", "${LABELS.CODEX_TOKEN_TYPE}", "(.*)"))`,
+  tokensByType: `sum by (${LABELS.TOKEN_TYPE}) (increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__range]) or label_replace(increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}!="total"}[$__range]), "${LABELS.TOKEN_TYPE}", "$1", "${LABELS.CODEX_TOKEN_TYPE}", "(.*)"))`,
 
   /** Tokens by model */
-  tokensByModel: `sum by (${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) or increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}="total"}[$__range]))`,
+  tokensByModel: `sum by (${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${PROVIDER_FILTER}}[$__range]) or increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}="total"}[$__range]))`,
 
   /** Tokens over time */
-  tokensOverTime: `sum by (${LABELS.TOKEN_TYPE}) (rate(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__rate_interval]) or label_replace(rate(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}!="total"}[$__rate_interval]), "${LABELS.TOKEN_TYPE}", "$1", "${LABELS.CODEX_TOKEN_TYPE}", "(.*)"))`,
+  tokensOverTime: `sum by (${LABELS.TOKEN_TYPE}) (rate(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__rate_interval]) or label_replace(rate(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}!="total"}[$__rate_interval]), "${LABELS.TOKEN_TYPE}", "$1", "${LABELS.CODEX_TOKEN_TYPE}", "(.*)"))`,
 
   /** Tokens by device */
-  tokensByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range]))`,
+  tokensByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range]))`,
 
   // ==================== SESSION QUERIES ====================
 
@@ -113,22 +113,22 @@ export const QUERIES = {
   sessionsByDevice: `round(sum by (${LABELS.DEVICE}) (increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range])))`,
 
   /** Average tokens per session */
-  avgTokensPerSession: `((sum(increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range])) or vector(0)) + (sum(increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}="total"}[$__range])) or vector(0))) / clamp_min(((sum(increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])) or vector(0)) + (sum(increase(${METRICS.CODEX.THREAD_STARTED}{${CODEX_CONTEXT_FILTER}}[$__range])) or vector(0))), 1)`,
+  avgTokensPerSession: `((sum(increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__range])) or vector(0)) + (sum(increase(${METRICS.CODEX.TURN_TOKEN_USAGE}{${CODEX_CONTEXT_FILTER}, ${LABELS.CODEX_TOKEN_TYPE}="total"}[$__range])) or vector(0))) / clamp_min(((sum(increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])) or vector(0)) + (sum(increase(${METRICS.CODEX.THREAD_STARTED}{${CODEX_CONTEXT_FILTER}}[$__range])) or vector(0))), 1)`,
 
   /** Average active time per session */
   avgActiveTimePerSession: `(sum(increase(${METRICS.CLAUDE_CODE.ACTIVE_TIME}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])) or vector(0)) / clamp_min(round(sum(increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))) or vector(0), 1)`,
 
   /** Average cost per session */
-  avgCostPerSession: `(sum(increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range])) or vector(0)) / clamp_min(round(sum(increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))) or vector(0), 1)`,
+  avgCostPerSession: `(sum(increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__range])) or vector(0)) / clamp_min(round(sum(increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))) or vector(0), 1)`,
 
   /** Sessions over time by device */
   sessionsOverTime: `round(sum by (${LABELS.DEVICE}) (increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__rate_interval])))`,
 
   /** Tokens per session over time */
-  sessionIntensityOverTime: `(sum(increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__rate_interval])) or vector(0)) / clamp_min(round(sum(increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]))) or vector(0), 1)`,
+  sessionIntensityOverTime: `(sum(increase(${METRICS.CLAUDE_CODE.TOKEN_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__rate_interval])) or vector(0)) / clamp_min(round(sum(increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]))) or vector(0), 1)`,
 
   /** Sessions by model */
-  sessionsByModel: `round(sum by (${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range]) or increase(${METRICS.CODEX.THREAD_STARTED}{${CODEX_CONTEXT_FILTER}}[$__range])))`,
+  sessionsByModel: `round(sum by (${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__range]) or increase(${METRICS.CODEX.THREAD_STARTED}{${CODEX_CONTEXT_FILTER}}[$__range])))`,
 
   /** Active users over time */
   activeUsersOverTime: `count(count by (${LABELS.USER_EMAIL}) (increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval]) > 0))`,
@@ -254,7 +254,7 @@ export const QUERIES = {
   usageByServiceVersion: `sum by (${LABELS.SERVICE_VERSION}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]))`,
 
   /** Cost by terminal type */
-  costByTerminalType: `sum by (${LABELS.TERMINAL_TYPE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range]))`,
+  costByTerminalType: `sum by (${LABELS.TERMINAL_TYPE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__range]))`,
 
   /** Sessions by terminal type */
   sessionsByTerminalType: `round(sum by (${LABELS.TERMINAL_TYPE}) (increase(${METRICS.CLAUDE_CODE.SESSION_COUNT}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range])))`,
@@ -263,7 +263,7 @@ export const QUERIES = {
   membersByOsType: `count by (${LABELS.OS_TYPE}) (count by (${LABELS.USER_EMAIL}, ${LABELS.OS_TYPE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__range]) > 0))`,
 
   /** Cost by OS type */
-  costByOsType: `sum by (${LABELS.OS_TYPE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range]))`,
+  costByOsType: `sum by (${LABELS.OS_TYPE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__range]))`,
 
   /** Version adoption over time */
   versionAdoptionOverTime: `sum(increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}}[$__rate_interval])) by (${LABELS.SERVICE_VERSION})`,
@@ -275,12 +275,12 @@ export const QUERIES = {
   usageByDevice: `sum by (${LABELS.DEVICE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range]))`,
 
   /** Cost by device (environment scene — includes member filter) */
-  costByDeviceEnv: `sum by (${LABELS.DEVICE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range]))`,
+  costByDeviceEnv: `sum by (${LABELS.DEVICE}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}, ${LABELS.DEVICE}!=""}[$__range]))`,
 
   // ==================== COST TABLE QUERIES ====================
 
   /** Cost table by device and model */
-  costTableByDevice: `sum by (${LABELS.DEVICE}, ${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${ENV_FILTERS}}[$__range]))`,
+  costTableByDevice: `sum by (${LABELS.DEVICE}, ${LABELS.MODEL}) (increase(${METRICS.CLAUDE_CODE.COST_USAGE}{${LABELS.USER_EMAIL}=~"$member", ${LABELS.MODEL}=~"$model", ${PROVIDER_FILTER}, ${ENV_FILTERS}}[$__range]))`,
 
   // ==================== CODEX ENVIRONMENT QUERIES ====================
 

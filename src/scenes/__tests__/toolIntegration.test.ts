@@ -298,3 +298,39 @@ describe('provider variable', () => {
     expect(names.indexOf('provider')).toBeLessThan(names.indexOf('model'));
   });
 });
+
+describe('provider filter application', () => {
+  it('scopes every model-aware query by provider', () => {
+    const modelAware = Object.entries(QUERIES).filter(([, query]) => query.includes(LABELS.MODEL));
+
+    // Sanity: the filter would be vacuous if nothing referenced model at all.
+    expect(modelAware.length).toBeGreaterThan(0);
+
+    for (const [name, query] of modelAware) {
+      expect([name, query.includes(LABELS.PROVIDER)]).toEqual([name, true]);
+    }
+  });
+
+  it('scopes the group-by-model panels that carry no model filter', () => {
+    for (const query of [QUERIES.costByModel, QUERIES.tokensByModel, QUERIES.sessionsByModel]) {
+      expect(query).toContain('${provider:raw}');
+    }
+  });
+
+  it('keeps the cost table grouped by raw model while still filtering by provider', () => {
+    expect(QUERIES.costTableByDevice).toContain(`sum by (${LABELS.DEVICE}, ${LABELS.MODEL})`);
+    expect(QUERIES.costTableByDevice).toContain('${provider:raw}');
+  });
+
+  it('leaves queries over metrics with no model dimension untouched', () => {
+    for (const query of [
+      QUERIES.totalLinesOfCode,
+      QUERIES.totalCommits,
+      QUERIES.totalPullRequests,
+      QUERIES.toolDecisionsByLanguage,
+      QUERIES.usageByOsType,
+    ]) {
+      expect(query).not.toContain(LABELS.PROVIDER);
+    }
+  });
+});
