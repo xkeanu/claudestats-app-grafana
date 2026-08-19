@@ -4,7 +4,12 @@ import {
   CustomVariable,
   SceneVariableSet,
 } from '@grafana/scenes';
-import { METRICS, LABELS, CODING_TOOLS } from '../constants';
+import { METRICS, LABELS, CODING_TOOLS, MODEL_FAMILIES, OTHER_FAMILY } from '../constants';
+import { PROVIDER_FILTERS, PROVIDER_FILTER } from './queries';
+
+/** Grafana's sentinel for a variable's "All" selection. */
+const ALL_VALUE = '$__all';
+const ALL_TEXT = 'All';
 
 /**
  * Creates a data source variable for Prometheus/Mimir
@@ -40,6 +45,29 @@ export function getTeamMemberVariable() {
 }
 
 /**
+ * Creates a provider family selector (Claude, GPT, GLM, Review, Other).
+ *
+ * A CustomVariable rather than a QueryVariable: the family set comes from the
+ * rule table, not from data, so there is nothing to query. Option values are
+ * complete label-matcher fragments, injected into queries with
+ * `${provider:raw}`.
+ */
+export function getProviderVariable() {
+  const familyOptions = [...MODEL_FAMILIES.map((family) => family.display), OTHER_FAMILY.display]
+    .map((display) => `${display} : ${PROVIDER_FILTERS[display]}`)
+    .join(', ');
+
+  return new CustomVariable({
+    name: 'provider',
+    label: 'Provider',
+    query: familyOptions,
+    includeAll: true,
+    defaultToAll: true,
+    allValue: PROVIDER_FILTERS.All,
+  });
+}
+
+/**
  * Creates a model filter variable (sonnet, opus, etc.)
  */
 export function getModelVariable() {
@@ -51,7 +79,7 @@ export function getModelVariable() {
       uid: '${prometheus_ds}',
     },
     query: {
-      query: `label_values({__name__=~"${METRICS.CLAUDE_CODE.COST_USAGE}|${METRICS.CLAUDE_CODE.TOKEN_USAGE}|${METRICS.CODEX.TURN_TOKEN_USAGE}|${METRICS.CODEX.API_REQUEST}|${METRICS.CODEX.TOOL_CALL}"}, ${LABELS.MODEL})`,
+      query: `label_values({__name__=~"${METRICS.CLAUDE_CODE.COST_USAGE}|${METRICS.CLAUDE_CODE.TOKEN_USAGE}|${METRICS.CODEX.TURN_TOKEN_USAGE}|${METRICS.CODEX.API_REQUEST}|${METRICS.CODEX.TOOL_CALL}", ${PROVIDER_FILTER}}, ${LABELS.MODEL})`,
       refId: 'ModelQuery',
     },
     includeAll: true,
@@ -205,11 +233,14 @@ export function getCodexOsVariable() {
  * Creates the shared variable set used across all scenes
  */
 export function getSharedVariables() {
-  return new SceneVariableSet({
+  const modelVariable = getModelVariable();
+
+  const variableSet = new SceneVariableSet({
     variables: [
       getPrometheusDataSourceVariable(),
       getTeamMemberVariable(),
-      getModelVariable(),
+      getProviderVariable(),
+      modelVariable,
       getCodingToolVariable(),
       getTerminalTypeVariable(),
       getOsTypeVariable(),
@@ -219,4 +250,25 @@ export function getSharedVariables() {
       getCodexOsVariable(),
     ],
   });
+
+  // Changing provider re-runs the model query, but Scenes skips its own
+  // value validation for URL-synced variables, so a model the new family
+  // excludes survives the switch and every panel renders empty with no
+  // visible cause. Reset it once the narrowed option list has arrived.
+  variableSet.addActivationHandler(() => {
+    const subscription = modelVariable.subscribeToState((state) => {
+      if (state.loading || state.value === ALL_VALUE) {
+        return;
+      }
+
+      const options = state.options ?? [];
+      if (options.length > 0 && !options.some((option) => option.value === state.value)) {
+        modelVariable.changeValueTo(ALL_VALUE, ALL_TEXT);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  });
+
+  return variableSet;
 }

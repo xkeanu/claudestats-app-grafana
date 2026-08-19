@@ -63,6 +63,7 @@ export const LABELS = {
   USER_EMAIL: 'user_email',
   JOB: 'job',
   MODEL: 'model',
+  PROVIDER: 'provider', // synthesized from `model` via label_replace; not emitted by any exporter
   TOKEN_TYPE: 'type', // input, output, cacheRead, cacheCreation
   LOC_TYPE: 'type', // added, removed
   SESSION_ID: 'session_id',
@@ -87,6 +88,38 @@ export const LABELS = {
   CODEX_DECISION: 'decision', // guardian review: approved | denied
   CODEX_SUCCESS: 'success', // tool call / api request: "true" | "false"
 } as const;
+
+export interface ModelFamily {
+  key: string;
+  display: string;
+  match: string;
+}
+
+/**
+ * Provider family rule table — the single definition point for model grouping.
+ *
+ * `match` is a Prometheus RE2 fragment. Prometheus regexes are fully anchored,
+ * so a family rule must describe the whole model string: `.*claude.*` rather
+ * than `claude.*`, otherwise the live `anthropic/claude-*` values are misfiled
+ * into the catch-all.
+ *
+ * Order is load-bearing. Rules are applied in this order on top of the
+ * catch-all, so a later entry overwrites an earlier one for a model that
+ * matches both.
+ */
+export const MODEL_FAMILIES = [
+  { key: 'claude', display: 'Claude', match: '.*claude.*' },
+  { key: 'gpt', display: 'GPT', match: 'gpt.*' },
+  { key: 'glm', display: 'GLM', match: 'glm.*' },
+  { key: 'review', display: 'Review', match: 'codex-auto-review' },
+] as const satisfies readonly ModelFamily[];
+
+/**
+ * Fallback family for any model matching no named rule. It carries no `match`:
+ * as a filter it is the negation of every named rule, and as a grouping it is
+ * the default the chain starts from, so no series is ever dropped.
+ */
+export const OTHER_FAMILY = { key: 'other', display: 'Other' } as const;
 
 // Default time ranges
 export const TIME_RANGES = {

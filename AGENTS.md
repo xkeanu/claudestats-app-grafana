@@ -86,12 +86,68 @@ All setup and configuration is consolidated in the plugin Configuration page (Ad
 ### Team Filtering
 
 - QueryVariable for filtering by `user_email` (team members identified by email address)
-- QueryVariable for filtering by `model`
+- CustomVariable for filtering by `provider` (model family: Claude, GPT, GLM, Review, Other)
+- QueryVariable for filtering by `model`, cascading from the selected provider
 - QueryVariable for filtering by `terminal_type` (IDE/Terminal: vscode, cursor, iTerm, tmux, etc.)
 - QueryVariable for filtering by `os_type` (darwin, linux, windows)
 - QueryVariable for filtering by `device` (custom device name via OTEL_RESOURCE_ATTRIBUTES)
 - All scenes support filtering to individual team members, models, IDEs, OS, and devices
 - "All" option for aggregate views
+
+### Provider-Aware Model Analytics
+
+Models are grouped into provider families so the dashboards stay readable as
+non-Anthropic models appear (the live datasource carries 34 distinct `model`
+values across Claude, GPT, GLM, and review models).
+
+- **Rule table** — `MODEL_FAMILIES` in `src/constants.ts` is the single
+  definition point: an ordered list of `{ key, display, match }`, plus an
+  `OTHER_FAMILY` catch-all. Nothing else may hard-code a family name or regex.
+- **Derivation** — `withProviderLabel()` in `src/scenes/queries.ts` wraps an
+  expression in a chained `label_replace` that assigns the catch-all innermost
+  and each named rule outside it, in table order. Order is load-bearing:
+  reversing it silently classifies everything as `Other`.
+- **Filtering** — `PROVIDER_FILTERS` exposes one matcher fragment per family,
+  injected into query selectors as `${provider:raw}`. The catch-all fragment is
+  a negated `!~` over the alternation of every named rule, because Prometheus
+  RE2 has no negative lookahead.
+- **Cascade** — selecting a provider narrows the `$model` dropdown via the same
+  `${provider:raw}` fragment inside `label_values`. `getSharedVariables()`
+  installs an activation handler that resets `$model` to All when the new
+  family excludes the current selection; Scenes does not do this itself for
+  URL-synced variables.
+
+**Regexes are fully anchored in Prometheus.** A family rule must describe the
+whole model string — `.*claude.*`, not `claude.*`, or the live
+`anthropic/claude-*` values fall through to the catch-all.
+
+**Only apply the provider filter to metrics that carry a `model` label.**
+Filtering a model-less metric by a named provider matches nothing and empties
+the panel, while "All" sweeps it into the catch-all.
+
+| Carries `model` | Does NOT carry `model` |
+|---|---|
+| `claude_code_cost_usage_USD_total`, `claude_code_token_usage_tokens_total`, `claude_code_lines_of_code_count_total` | `claude_code_session_count_total`, `claude_code_commit_count_total`, `claude_code_pull_request_count_total`, `claude_code_active_time_seconds_total`, `claude_code_code_edit_tool_decision_total` |
+| every `codex_*` metric used by this plugin — including `codex_guardian_review_total`, `codex_tool_call_total` and `codex_sse_event_total` | — |
+
+**Verify label presence against the datasource, not against the "notable
+labels" column of
+`docs/research/2026-06-27-telemetry/03-real-data-inventory.md`** — that column
+is a summary, not an exhaustive schema. It omits `model` on several `codex_*`
+families that do in fact carry it. The check that actually settles it:
+
+```
+count(count by (model) (increase(<metric>{model!=""}[90d])))
+```
+
+An empty result means no `model` label; a count means that many distinct
+values. Note an instant query is not enough — several `codex_*` counters are
+stale at `now` and need the range form above.
+
+`costTableByDevice` deliberately keeps raw-model grouping — a table is
+scannable, so per-model rows are the point — while still gaining the filter.
+`sessionsByModel` deliberately keeps raw-model grouping because its Claude
+metric has no `model` dimension to group on.
 
 ### Data Source Discovery
 
@@ -117,7 +173,8 @@ These metrics are exported by Claude Code when OTLP is enabled. Note that OTEL a
 
 - `user_email` - User's email address (primary identifier for team members)
 - `user_account_uuid` - Anonymized user identifier (for privacy-sensitive deployments)
-- `model` - Claude model used (e.g., claude-sonnet-4-20250514, claude-opus-4-5-20250514)
+- `model` - Model used (e.g., claude-sonnet-4-20250514, gpt-5.4, glm-4.7, codex-auto-review)
+- `provider` - Model family, **synthesized at query time** from `model`; no exporter emits it
 - `type` - Token type (input, output, cacheRead, cacheCreation) or LOC type (added, removed) or active time type (user, cli)
 - `session_id` - Unique session identifier
 - `tool_name` - Tool name for tool decision metrics (e.g., Edit, Write, Bash)

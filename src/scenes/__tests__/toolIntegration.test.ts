@@ -15,23 +15,44 @@ jest.mock('@grafana/scenes', () => ({
   },
   QueryVariable: class QueryVariable {
     state: Record<string, unknown>;
+    changeValueTo = jest.fn();
+    subscribers: Array<(state: Record<string, unknown>) => void> = [];
 
     constructor(initialState: Record<string, unknown>) {
       this.state = initialState;
+    }
+
+    subscribeToState(handler: (state: Record<string, unknown>) => void) {
+      this.subscribers.push(handler);
+      return { unsubscribe: jest.fn() };
+    }
+
+    emit(state: Record<string, unknown>) {
+      this.state = { ...this.state, ...state };
+      this.subscribers.forEach((handler) => handler(this.state));
     }
   },
   SceneVariableSet: class SceneVariableSet {
     state: Record<string, unknown>;
+    activationHandlers: Array<() => void> = [];
 
     constructor(initialState: Record<string, unknown>) {
       this.state = initialState;
     }
+
+    addActivationHandler(handler: () => void) {
+      this.activationHandlers.push(handler);
+    }
+
+    activate() {
+      this.activationHandlers.forEach((handler) => handler());
+    }
   },
 }));
 
-import { CODING_TOOLS, LABELS, METRICS, ROUTES } from '../../constants';
-import { getCodingToolVariable } from '../variables';
-import { QUERIES } from '../queries';
+import { CODING_TOOLS, LABELS, METRICS, MODEL_FAMILIES, OTHER_FAMILY, ROUTES } from '../../constants';
+import { getCodingToolVariable, getModelVariable, getProviderVariable, getSharedVariables } from '../variables';
+import { PROVIDER_FILTERS, QUERIES, withProviderLabel } from '../queries';
 
 describe('coding tool integration contracts', () => {
   it('defines provider-neutral labels without reusing decision source', () => {
@@ -157,7 +178,331 @@ describe('coding tool integration contracts', () => {
     }
   });
 
+  it('scopes Codex metrics by provider, since they all carry a populated model label', () => {
+    // Verified against the datasource over 90d: guardian_review has 5 model
+    // values, tool_call 8, sse_event 5 — all gpt-* or codex-auto-review. The
+    // inventory doc's "notable labels" column is a summary, not a schema.
+    const codexQueries = {
+      codexApprovalRate: QUERIES.codexApprovalRate,
+      codexToolCallsByTool: QUERIES.codexToolCallsByTool,
+      codexToolSuccessRate: QUERIES.codexToolSuccessRate,
+      codexSseEvents: QUERIES.codexSseEvents,
+      codexTurnCount: QUERIES.codexTurnCount,
+    };
+
+    for (const [name, query] of Object.entries(codexQueries)) {
+      expect([name, query.includes('${provider:raw}')]).toEqual([name, true]);
+    }
+  });
+
   it('exposes the Codex route for navigation', () => {
     expect(ROUTES.Codex).toBe('codex');
+  });
+});
+
+describe('provider family rule table', () => {
+  it('exposes a provider label name', () => {
+    expect(LABELS.PROVIDER).toBe('provider');
+  });
+
+  it('defines the four named families in order with distinct displays', () => {
+    expect(MODEL_FAMILIES.map((family) => family.key)).toEqual(['claude', 'gpt', 'glm', 'review']);
+
+    const displays = MODEL_FAMILIES.map((family) => family.display);
+    expect(new Set(displays).size).toBe(displays.length);
+
+    for (const family of MODEL_FAMILIES) {
+      expect(typeof family.match).toBe('string');
+      expect(family.match.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('uses an unanchored claude rule so anthropic/claude-* is not misfiled', () => {
+    const claude = MODEL_FAMILIES.find((family) => family.key === 'claude');
+
+    expect(claude?.match).toBe('.*claude.*');
+    // Prometheus regexes are fully anchored; prove the rule survives that.
+    expect(new RegExp(`^(?:${claude?.match})$`).test('anthropic/claude-sonnet-4.6')).toBe(true);
+  });
+
+  it('defines a catch-all family carrying no match fragment', () => {
+    expect(OTHER_FAMILY.display).toBe('Other');
+    expect('match' in OTHER_FAMILY).toBe(false);
+  });
+});
+
+describe('provider derivation helpers', () => {
+  /** Prometheus regexes are fully anchored; mirror that when testing a fragment. */
+  const anchored = (fragment: string) => new RegExp(`^(?:${fragment})$`);
+
+  it('wraps an expression in a label_replace chain, one call per family plus the catch-all', () => {
+    const wrapped = withProviderLabel('sum(up)');
+
+    expect(wrapped).toContain('sum(up)');
+    expect(wrapped.match(/label_replace\(/g)).toHaveLength(MODEL_FAMILIES.length + 1);
+  });
+
+  it('emits the catch-all innermost and the named rules outside it in table order', () => {
+    const wrapped = withProviderLabel('sum(up)');
+
+    // Nesting is left-to-right in the emitted string: the innermost call is
+    // written first. Inverting the chain would classify everything as Other.
+    const positions = [OTHER_FAMILY.display, ...MODEL_FAMILIES.map((family) => family.display)].map(
+      (display) => wrapped.indexOf(`"${LABELS.PROVIDER}", "${display}"`)
+    );
+
+    expect(positions).not.toContain(-1);
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+  });
+
+  it('anchors the claude rule wide enough for prefixed and suffixed model names', () => {
+    const claude = MODEL_FAMILIES.find((family) => family.key === 'claude')!;
+
+    expect(anchored(claude.match).test('anthropic/claude-sonnet-4.6')).toBe(true);
+    expect(anchored(claude.match).test('claude-opus-5[1m]')).toBe(true);
+    // The reason the rule is not a bare prefix: it would drop the vendor-prefixed values.
+    expect(anchored('claude.*').test('anthropic/claude-sonnet-4.6')).toBe(false);
+  });
+
+  it('exposes a filter fragment per family plus All and the catch-all', () => {
+    expect(Object.keys(PROVIDER_FILTERS).sort()).toEqual(
+      ['All', ...MODEL_FAMILIES.map((family) => family.display), OTHER_FAMILY.display].sort()
+    );
+
+    for (const family of MODEL_FAMILIES) {
+      expect(PROVIDER_FILTERS[family.display]).toBe(`${LABELS.MODEL}=~"${family.match}"`);
+    }
+  });
+
+  it('negates every named rule in the catch-all filter, since RE2 has no lookahead', () => {
+    const catchAll = PROVIDER_FILTERS[OTHER_FAMILY.display];
+
+    expect(catchAll).toContain(`${LABELS.MODEL}!~"`);
+    expect(catchAll).not.toContain(`${LABELS.MODEL}=~"`);
+
+    const alternation = catchAll.slice(catchAll.indexOf('"') + 1, catchAll.lastIndexOf('"'));
+    expect(alternation.split('|')).toEqual(MODEL_FAMILIES.map((family) => family.match));
+
+    // A model matching no named rule is the only thing the fragment admits.
+    expect(anchored(alternation).test('some-unknown-model')).toBe(false);
+    expect(anchored(alternation).test('glm-4.7')).toBe(true);
+  });
+
+  it('derives both helpers from the rule table, so a fifth family needs no edit here', () => {
+    jest.isolateModules(() => {
+      const actual = jest.requireActual('../../constants');
+      jest.doMock('../../constants', () => ({
+        ...actual,
+        MODEL_FAMILIES: [...actual.MODEL_FAMILIES, { key: 'llama', display: 'Llama', match: 'llama.*' }],
+      }));
+
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const patched = require('../queries');
+
+      expect(patched.withProviderLabel('sum(up)')).toContain(`"${LABELS.PROVIDER}", "Llama"`);
+      expect(patched.withProviderLabel('sum(up)').match(/label_replace\(/g)).toHaveLength(
+        MODEL_FAMILIES.length + 2
+      );
+      expect(patched.PROVIDER_FILTERS.Llama).toBe(`${LABELS.MODEL}=~"llama.*"`);
+      expect(patched.PROVIDER_FILTERS[OTHER_FAMILY.display]).toContain('llama.*');
+    });
+  });
+});
+
+describe('provider variable', () => {
+  it('offers All plus one option per family, valued by matcher fragment', () => {
+    const variable = getProviderVariable();
+
+    expect(variable.state.name).toBe('provider');
+    expect(variable.state.includeAll).toBe(true);
+    expect(variable.state.defaultToAll).toBe(true);
+    expect(variable.state.allValue).toBe(PROVIDER_FILTERS.All);
+
+    const query = variable.state.query as string;
+    for (const display of [...MODEL_FAMILIES.map((family) => family.display), OTHER_FAMILY.display]) {
+      expect(query).toContain(`${display} : ${PROVIDER_FILTERS[display]}`);
+    }
+    expect(query.split(',')).toHaveLength(MODEL_FAMILIES.length + 1);
+    // The catch-all option must carry the negated matcher, not a positive one.
+    expect(query).toContain(`${OTHER_FAMILY.display} : ${LABELS.MODEL}!~"`);
+  });
+
+  it('places provider before model so the filter bar reads in cascade order', () => {
+    const names = (getSharedVariables().state.variables as Array<{ state: { name: string } }>).map(
+      (variable) => variable.state.name
+    );
+
+    expect(names).toContain('provider');
+    expect(names.indexOf('provider')).toBeLessThan(names.indexOf('model'));
+  });
+});
+
+describe('provider filter application', () => {
+  it('scopes every model-aware query by provider', () => {
+    const modelAware = Object.entries(QUERIES).filter(([, query]) => query.includes(LABELS.MODEL));
+
+    // Sanity: the filter would be vacuous if nothing referenced model at all.
+    expect(modelAware.length).toBeGreaterThan(0);
+
+    for (const [name, query] of modelAware) {
+      expect([name, query.includes(LABELS.PROVIDER)]).toEqual([name, true]);
+    }
+  });
+
+  it('scopes the group-by-model panels that carry no model filter', () => {
+    for (const query of [QUERIES.costByModel, QUERIES.tokensByModel]) {
+      expect(query).toContain('${provider:raw}');
+    }
+  });
+
+  it('keeps sessions grouped by raw model, since session_count has no model label', () => {
+    // claude_code_session_count_total carries no `model` label (0 of 6177
+    // series). Grouping it by provider files every Claude session under the
+    // catch-all, and filtering it by a named provider drops them entirely.
+    expect(QUERIES.sessionsByModel).toContain(`sum by (${LABELS.MODEL})`);
+    expect(QUERIES.sessionsByModel).not.toContain('label_replace(');
+
+    const claudeTerm = QUERIES.sessionsByModel.slice(
+      0,
+      QUERIES.sessionsByModel.indexOf(METRICS.CODEX.THREAD_STARTED)
+    );
+    expect(claudeTerm).toContain(METRICS.CLAUDE_CODE.SESSION_COUNT);
+    expect(claudeTerm).not.toContain('${provider:raw}');
+  });
+
+  it('keeps the cost table grouped by raw model while still filtering by provider', () => {
+    expect(QUERIES.costTableByDevice).toContain(`sum by (${LABELS.DEVICE}, ${LABELS.MODEL})`);
+    expect(QUERIES.costTableByDevice).toContain('${provider:raw}');
+  });
+
+  it('leaves queries over metrics with no model dimension untouched', () => {
+    // Per docs/research/2026-06-27-telemetry/03-real-data-inventory.md, these
+    // metrics carry no `model` label: commit_count, pull_request_count,
+    // active_time, code_edit_tool_decision, session_count.
+    const modelless = {
+      totalCommits: QUERIES.totalCommits,
+      totalPullRequests: QUERIES.totalPullRequests,
+      toolDecisionsByLanguage: QUERIES.toolDecisionsByLanguage,
+      totalActiveTime: QUERIES.totalActiveTime,
+      sessionsByTerminalType: QUERIES.sessionsByTerminalType,
+    };
+
+    for (const [name, query] of Object.entries(modelless)) {
+      expect([name, query.includes(LABELS.PROVIDER)]).toEqual([name, false]);
+    }
+  });
+
+  it('scopes cost-backed and lines-of-code queries, which do carry model', () => {
+    // Same inventory: cost_usage carries model on every series, and model is
+    // confirmed present on lines_of_code. Leaving these unscoped made the
+    // Environment page show filtered and unfiltered cost panels side by side.
+    const modelBearing = {
+      usageByOsType: QUERIES.usageByOsType,
+      usageByHostArch: QUERIES.usageByHostArch,
+      usageByTerminalType: QUERIES.usageByTerminalType,
+      usageByServiceVersion: QUERIES.usageByServiceVersion,
+      versionAdoptionOverTime: QUERIES.versionAdoptionOverTime,
+      terminalTypeOverTime: QUERIES.terminalTypeOverTime,
+      usageByDevice: QUERIES.usageByDevice,
+      membersByOsType: QUERIES.membersByOsType,
+      totalLinesOfCode: QUERIES.totalLinesOfCode,
+      linesOfCodeByType: QUERIES.linesOfCodeByType,
+      linesOfCodeByDevice: QUERIES.linesOfCodeByDevice,
+      linesOfCodeOverTime: QUERIES.linesOfCodeOverTime,
+    };
+
+    for (const [name, query] of Object.entries(modelBearing)) {
+      expect([name, query.includes('${provider:raw}')]).toEqual([name, true]);
+    }
+  });
+});
+
+describe('model cascade reset', () => {
+  const activatedSet = () => {
+    const set = getSharedVariables() as unknown as {
+      activate: () => void;
+      state: { variables: Array<{ state: { name: string } }> };
+    };
+    set.activate();
+
+    const model = set.state.variables.find((variable) => variable.state.name === 'model');
+    return { set, model: model as unknown as ModelVariableMock };
+  };
+
+  interface ModelVariableMock {
+    emit: (state: Record<string, unknown>) => void;
+    changeValueTo: jest.Mock;
+  }
+
+  it('narrows the model query by the selected provider', () => {
+    const query = (getModelVariable().state.query as unknown as { query: string }).query;
+
+    expect(query).toContain('${provider:raw}');
+    expect(query).toContain(`, ${LABELS.MODEL})`);
+  });
+
+  it('resets a model excluded by the newly selected provider back to All', () => {
+    const { model } = activatedSet();
+
+    // Provider switched to Claude: the option list refreshed, glm-4.7 did not survive it.
+    model.emit({
+      loading: false,
+      value: 'glm-4.7',
+      options: [{ value: 'claude-opus-5', label: 'claude-opus-5' }],
+    });
+
+    expect(model.changeValueTo).toHaveBeenCalledWith('$__all', 'All');
+  });
+
+  it('leaves a model that the new provider still includes alone', () => {
+    const { model } = activatedSet();
+
+    model.emit({
+      loading: false,
+      value: 'claude-opus-5',
+      options: [{ value: 'claude-opus-5', label: 'claude-opus-5' }],
+    });
+
+    expect(model.changeValueTo).not.toHaveBeenCalled();
+  });
+
+  it('does not reset while the option list is still loading or already All', () => {
+    const { model } = activatedSet();
+
+    model.emit({ loading: true, value: 'glm-4.7', options: [] });
+    model.emit({ loading: false, value: '$__all', options: [{ value: 'claude-opus-5', label: 'x' }] });
+
+    expect(model.changeValueTo).not.toHaveBeenCalled();
+  });
+});
+
+describe('provider-grouped panels', () => {
+  const regrouped = ['costByModel', 'costOverTime', 'tokensByModel'] as const;
+
+  it('aggregates the three model-bearing by-model panels on provider', () => {
+    for (const name of regrouped) {
+      const query = QUERIES[name];
+
+      expect([name, query.includes(`sum by (${LABELS.PROVIDER})`)]).toEqual([name, true]);
+      expect([name, query.includes('label_replace(')]).toEqual([name, true]);
+      // The chain must be present in full, not a hand-written partial.
+      expect([name, (query.match(/label_replace\(/g) ?? []).length]).toEqual([
+        name,
+        MODEL_FAMILIES.length + 1,
+      ]);
+    }
+  });
+
+  it('caps each re-grouped panel at the four families plus the catch-all', () => {
+    for (const name of regrouped) {
+      const assigned = [...QUERIES[name].matchAll(/"provider", "([^"]+)"/g)].map((match) => match[1]);
+
+      expect([name, new Set(assigned).size]).toEqual([name, MODEL_FAMILIES.length + 1]);
+    }
+  });
+
+  it('leaves the cost table grouped by raw model', () => {
+    expect(QUERIES.costTableByDevice).toContain(`sum by (${LABELS.DEVICE}, ${LABELS.MODEL})`);
+    expect(QUERIES.costTableByDevice).not.toContain('label_replace(');
   });
 });

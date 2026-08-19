@@ -92,7 +92,7 @@ export function getTokensScene(
       {
         refId: 'TokensByModel',
         expr: QUERIES.tokensByModel,
-        legendFormat: '{{model}}',
+        legendFormat: '{{provider}}',
       },
     ],
   });
@@ -199,7 +199,7 @@ export function getTokensScene(
             new SceneFlexItem({
               width: '50%',
               body: PanelBuilders.piechart()
-                .setTitle('Tokens by Model')
+                .setTitle('Tokens by Provider')
                 .setUnit('short')
                 .setData(tokensByModelQuery)
                 .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })

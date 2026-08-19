@@ -66,7 +66,7 @@ export function getOverviewScene(
       {
         refId: 'CostOverTime',
         expr: QUERIES.costOverTime,
-        legendFormat: '{{model}}',
+        legendFormat: '{{provider}}',
       },
     ],
   });
