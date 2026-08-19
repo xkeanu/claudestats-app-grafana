@@ -13,7 +13,8 @@
     "test": "jest --watch --onlyChanged",
     "test:ci": "jest --passWithNoTests --maxWorkers 4",
     "typecheck": "tsc --noEmit",
-    "sign": "npx --yes @grafana/sign-plugin@latest"
+    "sign": "npx --yes @grafana/sign-plugin@latest",
+    "update-prices": "ts-node --project scripts/tsconfig.json scripts/update-price-snapshot.ts"
   },
   "author": "Timur Digital",
   "license": "Apache-2.0",
