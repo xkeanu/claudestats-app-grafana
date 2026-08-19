@@ -5,22 +5,14 @@ import {
   SceneQueryRunner,
   SceneTimeRange,
   SceneVariableSet,
-  PanelBuilders,
   VariableValueSelectors,
   SceneControlsSpacer,
   SceneTimePicker,
   SceneRefreshPicker,
 } from '@grafana/scenes';
-import {
-  BigValueGraphMode,
-  LegendDisplayMode,
-  LineInterpolation,
-  StackingMode,
-  BarGaugeDisplayMode,
-  BarGaugeValueMode,
-  VizOrientation,
-} from '@grafana/schema';
+import { BigValueGraphMode, LineInterpolation, StackingMode } from '@grafana/schema';
 import { QUERIES } from '../queries';
+import { barPanel, piePanel, statPanel, timeseriesPanel } from '../viz/panels';
 import { PANEL_HEIGHTS } from '../../constants';
 
 export function getToolsScene(
@@ -121,10 +113,7 @@ export function getToolsScene(
           height: PANEL_HEIGHTS.STAT,
           children: [
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Tool Acceptance Rate')
-                .setUnit('percent')
-                .setData(toolAcceptanceRateQuery)
+              body: statPanel({ title: 'Tool Acceptance Rate', quantity: 'rate', data: toolAcceptanceRateQuery })
                 .setOption('graphMode', BigValueGraphMode.None)
                 .setThresholds({
                   mode: 'absolute',
@@ -137,11 +126,10 @@ export function getToolsScene(
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.piechart()
-                .setTitle('Tool Decisions')
-                .setData(toolDecisionsQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
-                .build(),
+              // Stays a pie: `decision` is accept | reject. Both names carry
+              // their semantic colour from the palette module, applied by the
+              // contract's overrides rather than by palette-classic-by-name.
+              body: piePanel({ title: 'Tool Decisions', quantity: 'count', data: toolDecisionsQuery }).build(),
             }),
           ],
         }),
@@ -152,30 +140,26 @@ export function getToolsScene(
           children: [
             new SceneFlexItem({
               width: '60%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Tool Decisions Over Time')
-                .setUnit('short')
-                .setData(toolDecisionsOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Not clustered: grouped by the bounded `decision` label.
+              body: timeseriesPanel({
+                title: 'Tool Decisions Over Time',
+                quantity: 'count',
+                data: toolDecisionsOverTimeQuery,
+              })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
-                .setCustomFieldConfig('fillOpacity', 30)
                 .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
             new SceneFlexItem({
               width: '40%',
-              body: PanelBuilders.bargauge()
-                .setTitle('Usage by Tool')
-                .setUnit('short')
-                .setData(toolDecisionsByToolQuery)
-                .setOption('displayMode', BarGaugeDisplayMode.Gradient)
-                .setOption('orientation', VizOrientation.Horizontal)
-                .setOption('valueMode', BarGaugeValueMode.Text)
-                .setOption('showUnfilled', true)
-                .setOption('minVizWidth', 150)
-                .setOption('minVizHeight', 25)
-                .setDisplayName('${__series.name}')
-                .build(),
+              // `tool_name` will not reach the bar limit today, but it takes
+              // the contract's default rather than being special-cased.
+              body: barPanel({
+                title: 'Usage by Tool',
+                quantity: 'count',
+                data: toolDecisionsByToolQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
           ],
         }),
@@ -186,21 +170,22 @@ export function getToolsScene(
           children: [
             new SceneFlexItem({
               width: '40%',
-              body: PanelBuilders.piechart()
-                .setTitle('Claude Decisions by Source')
-                .setData(toolDecisionsBySourceQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
-                .build(),
+              // Stays a pie: decision `source` is a bounded six-value set.
+              body: piePanel({
+                title: 'Claude Decisions by Source',
+                quantity: 'count',
+                data: toolDecisionsBySourceQuery,
+              }).build(),
             }),
             new SceneFlexItem({
               width: '60%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Claude Decision Source Over Time')
-                .setUnit('short')
-                .setData(toolDecisionsBySourceOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Not clustered: grouped by the bounded decision `source`.
+              body: timeseriesPanel({
+                title: 'Claude Decision Source Over Time',
+                quantity: 'count',
+                data: toolDecisionsBySourceOverTimeQuery,
+              })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
-                .setCustomFieldConfig('fillOpacity', 30)
                 .build(),
             }),
           ],
@@ -211,11 +196,13 @@ export function getToolsScene(
           height: PANEL_HEIGHTS.MEDIUM,
           children: [
             new SceneFlexItem({
-              body: PanelBuilders.piechart()
-                .setTitle('Claude Tool Decisions by Language')
-                .setData(toolDecisionsByLanguageQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
-                .build(),
+              // Ranked comparison over an unbounded dimension: bar, clustered.
+              body: barPanel({
+                title: 'Claude Tool Decisions by Language',
+                quantity: 'count',
+                data: toolDecisionsByLanguageQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
           ],
         }),

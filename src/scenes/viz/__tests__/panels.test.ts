@@ -68,12 +68,32 @@ describe('multi-series factories set colour mode by name (REQ-007)', () => {
 });
 
 describe('semantic colours take precedence over the name-derived colour (REQ-008)', () => {
-  it('overrides every semantic series name with its fixed colour', () => {
-    const panel = timeseriesPanel({ title: 't', quantity: 'cost', data: query() }).build();
+  it.each([
+    ['timeseries', () => timeseriesPanel({ title: 't', quantity: 'cost', data: query() }).build()],
+    ['pie', () => piePanel({ title: 't', quantity: 'count', data: query() }).build()],
+    ['bar', () => barPanel({ title: 't', quantity: 'count', data: query() }).build()],
+  ])('%s overrides every semantic series name with its fixed colour', (_name, build) => {
+    const panel = build();
 
     for (const [seriesName, color] of Object.entries(SEMANTIC_SERIES_COLORS)) {
       expect(overrideColorFor(panel, seriesName)).toBe(color);
     }
+  });
+
+  it('gives accept green and reject red on a pie, not a palette-derived hue', () => {
+    // The Tools scene's decision pie depends on this precedence.
+    const panel = piePanel({ title: 't', quantity: 'count', data: query() }).build();
+
+    expect(overrideColorFor(panel, 'accept')).toBe('green');
+    expect(overrideColorFor(panel, 'reject')).toBe('red');
+  });
+
+  it('gives added green and removed red on a pie', () => {
+    // The Productivity scene's lines-added-vs-removed pie depends on this.
+    const panel = piePanel({ title: 't', quantity: 'count', data: query() }).build();
+
+    expect(overrideColorFor(panel, 'added')).toBe('green');
+    expect(overrideColorFor(panel, 'removed')).toBe('red');
   });
 
   it('overrides the residual series at any aggregated count', () => {
