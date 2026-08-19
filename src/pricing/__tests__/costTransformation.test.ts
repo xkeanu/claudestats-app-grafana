@@ -4,6 +4,8 @@ import {
   codexTokenRowsFromFrames,
   describePriceTable,
   makeCostTransformation,
+  makeBlendedCostTransformation,
+  BLENDED_FIELD_NAME,
   COST_FIELD_NAME,
   UNPRICED_FIELD_NAME,
   PROVENANCE_FIELD_NAME,
@@ -173,5 +175,76 @@ describe('makeCostTransformation', () => {
     const [frame] = await runTransform(withTotal, TABLE, 'cost');
 
     expect(frame.fields[0].values[0]).toBeCloseTo(1.19, 10);
+  });
+});
+
+/** A Claude cost series: a single unlabelled value, as `sum(increase(...))` returns. */
+const measuredFrame = (values: number[], endTime = WINDOW_END): DataFrame =>
+  toDataFrame({
+    refId: 'TotalCost',
+    fields: [
+      {
+        name: 'Time',
+        type: FieldType.time,
+        values: values.map((_, i) => endTime - (values.length - 1 - i) * STEP),
+      },
+      { name: 'Value', type: FieldType.number, values },
+    ],
+  });
+
+describe('makeBlendedCostTransformation', () => {
+  const runBlended = async (frames: DataFrame[], table = TABLE) => {
+    const operator = makeBlendedCostTransformation(() => Promise.resolve(table));
+    const [frame] = await firstValueFrom(of(frames).pipe(operator({} as never)));
+    return frame;
+  };
+
+  const codexFrames = [
+    seriesFrame({ model: 'gpt-5.3-codex', token_type: 'input' }, [1_000_000]),
+    seriesFrame({ model: 'gpt-5.3-codex', token_type: 'cached_input' }, [800_000]),
+    seriesFrame({ model: 'gpt-5.3-codex', token_type: 'output' }, [50_000]),
+  ];
+
+  it('adds the Codex estimate to the measured Claude cost', async () => {
+    const frame = await runBlended([measuredFrame([10]), ...codexFrames]);
+
+    expect(frame.fields[0].name).toBe(BLENDED_FIELD_NAME);
+    expect(frame.fields[0].values[0]).toBeCloseTo(11.19, 10);
+  });
+
+  it('equals the Claude-only figure when the range holds no Codex data', async () => {
+    const frame = await runBlended([measuredFrame([10])]);
+
+    expect(frame.fields[0].values[0]).toBeCloseTo(10, 10);
+  });
+
+  it('equals the Codex estimate alone when there is no Claude cost', async () => {
+    const frame = await runBlended(codexFrames);
+
+    expect(frame.fields[0].values[0]).toBeCloseTo(1.19, 10);
+  });
+
+  it('is zero, not absent, when neither tool reports anything', async () => {
+    const frame = await runBlended([]);
+
+    expect(frame.fields[0].values[0]).toBe(0);
+  });
+
+  it('does not mistake a Codex token series for a cost series', async () => {
+    // The partition is by label, not by refId order. A token count leaking
+    // into the measured side would add ~1.85 million dollars here.
+    const frame = await runBlended(codexFrames);
+
+    expect(frame.fields[0].values[0]).toBeLessThan(2);
+  });
+
+  it('ignores a stale Claude cost series the same way it ignores stale token series', async () => {
+    const frame = await runBlended([
+      measuredFrame([10]),
+      measuredFrame([999], WINDOW_END - 20 * STEP),
+      ...codexFrames,
+    ]);
+
+    expect(frame.fields[0].values[0]).toBeCloseTo(11.19, 10);
   });
 });
