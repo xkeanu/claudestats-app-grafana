@@ -154,6 +154,112 @@ metric has no `model` dimension to group on.
 - DataSourceVariable for Prometheus auto-discovery
 - Supports multiple Prometheus-compatible data sources
 
+### Estimated Codex Cost
+
+**Codex emits no cost metric.** `codex_turn_token_usage_sum` carries token
+counts and nothing else, so every Codex dollar figure in this plugin is
+DERIVED — tokens times a published price table — and is labelled as an
+estimate wherever it appears. Claude Code cost is measured
+(`claude_code_cost_usage_USD_total`) and is never touched by any of this.
+
+- **Price data** — extracted from LiteLLM's
+  `model_prices_and_context_window.json`
+  (https://github.com/BerriAI/litellm), MIT licensed; the notice is retained
+  at `src/pricing/LICENSE.litellm`.
+- **Snapshot** — `src/pricing/price-snapshot.json` is committed, not fetched
+  at build time, so the bundle is reproducible and offline and a price change
+  arrives as a reviewable diff. It carries its own `asOf` date; that date, not
+  the build date, is what the UI renders.
+- **Refresh** — `npm run update-prices` regenerates the snapshot by hand. It is
+  deliberately NOT wired into `npm run build`. Pass `--as-of YYYY-MM-DD` to pin
+  the date. Output is deterministic (keys sorted, fixed formatting), so an
+  unchanged upstream re-run diffs only on `asOf`.
+- **Live refresh** — off by default, opt in on the plugin Configuration page
+  under the Pricing tab. While off the plugin issues NO outbound request for
+  price data. The enable flag is read with `=== true`, because `jsonData`
+  round-trips through hand-edited provisioning YAML where the string `"false"`
+  would otherwise be truthy.
+- **Provenance** — `snapshot` (shipped table), `live` (feed used), `fallback`
+  (refresh enabled but the feed was unreachable or malformed). `fallback` is
+  deliberately distinct from `snapshot`: a blocked refresh must not be
+  presentable as a chosen default. The Codex tab surfaces which is in use.
+
+#### Three rules that are cheap to get wrong and expensive to ship wrong
+
+**1. `input` is GROSS and already contains `cached_input`.** Fresh input must
+be derived by subtraction:
+
+```
+fresh_input = max(0, input - cached_input)
+cost = fresh_input * input_cost_per_token
+     + cached_input * cache_read_input_token_cost
+     + output * output_cost_per_token
+```
+
+Charging `input` at the input rate AND `cached_input` at the cache-read rate
+bills ~95% of all Codex tokens twice. On the live 30d window that is $3,039
+instead of the correct $399 — a 7.6x overstatement.
+
+**2. Only `input`, `cached_input` and `output` are billable.**
+`codex_turn_token_usage_sum` carries six `token_type` values, and three of them
+are traps. Measured over 90d on every model without exception:
+
+| Relationship | Consequence |
+|---|---|
+| `total == input + output` | `total` is a partial sum, not a fourth type |
+| `cached_input <= input` | a subset, ~95% of input |
+| `reasoning_output <= output` | a subset of output |
+| `cache_write_input == 0` | present, always zero |
+| `non_cached_input` | absent from this metric entirely |
+
+`CODEX_BILLABLE_TOKEN_TYPES` in `src/constants.ts` is the single definition
+point. Both the query selector and `estimateCost()` exclude the rest —
+belt-and-braces, so the double-counting trap is not a single point of failure.
+
+**3. A model is priced only when all three rates are present.** A partial entry
+goes to the unpriced bucket rather than borrowing a substitute rate. No special
+cases, no invented numbers.
+
+#### Model-key matching
+
+**Exact string match** of the `model` label against the price-table key set
+filtered to `litellm_provider == "openai"`. No prefix strip, no normalization.
+Codex reports bare model ids (`gpt-5.6-sol`) which match that key set directly.
+
+A `chatgpt/` prefix fallback was evaluated and rejected: the only live value it
+would reach (`chatgpt/gpt-5.3-codex-spark`) carries no cost fields, so it stays
+unpriced under rule 3 either way.
+
+As of 2026-08-19, 6 of 8 live model values match, covering ~89% of billable
+Codex tokens. The unmatched ones are `codex-auto-review` — a synthetic label
+for Codex's own review pass, not an OpenAI catalogue model, and not expected to
+gain a price — and `gpt-5.3-codex-spark`. Their volume is surfaced as
+**Unpriced Tokens** on the Codex tab so an understated total is visibly
+understated.
+
+#### Only count series still live at the end of the window
+
+Grafana's Prometheus datasource returns one frame per series with its OWN time
+axis; it does not pad them onto a shared grid. A model that went idle mid-window
+simply ends early, and `increase(...[$__range])` for it is zero over the
+trailing window. Reducing with "last non-null value" instead resurrects its last
+recorded total as if current — that revived `gpt-5.3-codex-spark` after 20 idle
+days and inflated unpriced volume from 68.9M to 80.5M. Compare each series
+against the window end taken across ALL frames.
+
+#### Where it surfaces
+
+| Panel | Scene |
+|---|---|
+| Estimated Codex Cost, Unpriced Tokens, Price Table | Codex |
+| Total Cost * (Claude measured + Codex estimated) | Overview, Costs |
+
+Panels that break cost down by a label Codex does not emit (`user_email`,
+`terminal_type`, `os_type`, `device`) cannot meaningfully blend — that is why
+`CODEX_CONTEXT_FILTER` exists separately from `ENV_FILTERS`. They stay
+Claude-only and say so in their description rather than silently dropping the
+Codex share.
+
 ## Claude Code Metrics Reference
 
 These metrics are exported by Claude Code when OTLP is enabled. Note that OTEL adds unit suffixes to metric names:
@@ -168,6 +274,14 @@ These metrics are exported by Claude Code when OTLP is enabled. Note that OTEL a
 | `claude_code_pull_request_count_total` | Pull requests created |
 | `claude_code_active_time_seconds_total` | Active coding time in seconds |
 | `claude_code_code_edit_tool_decision_total` | Tool accept/reject decisions |
+
+**Codex emits no equivalent of `claude_code_cost_usage_USD_total`.** It has no
+cost metric at all — `codex_turn_token_usage_sum` carries token counts only,
+which is why Codex cost is estimated. See "Estimated Codex Cost" above.
+
+| Codex metric | Description |
+|--------------|-------------|
+| `codex_turn_token_usage_sum` | Token consumption by `token_type` and `model`. NO cost counterpart. |
 
 ### Labels
 
