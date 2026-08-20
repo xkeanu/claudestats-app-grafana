@@ -1,3 +1,5 @@
+import { createTheme } from '@grafana/data';
+
 import { MODEL_FAMILIES, OTHER_FAMILY } from '../../../constants';
 import {
   SEMANTIC_SERIES_COLORS,
@@ -30,6 +32,27 @@ describe('SEMANTIC_SERIES_COLORS', () => {
     for (const color of Object.values(SEMANTIC_SERIES_COLORS)) {
       expect(color).not.toMatch(/^#/);
       expect(color).toMatch(/^[a-z][a-z-]*$/);
+    }
+  });
+
+  // The check above is not enough on its own: 'text-disabled' passes it and is
+  // still not a colour Grafana can resolve. getColorByName returns an unknown
+  // name UNCHANGED, so the failure only surfaces later, when the panel asks the
+  // theme for a fill alpha and throws "Unsupported 'text-disabled' color".
+  // Assert resolution here instead of trusting the name's shape.
+  it.each(['dark', 'light'] as const)('resolves every colour to a real %s-theme value', (mode) => {
+    const theme = createTheme({ colors: { mode } });
+
+    for (const [seriesName, color] of Object.entries(SEMANTIC_SERIES_COLORS)) {
+      const resolved = theme.visualization.getColorByName(color);
+      expect(`${seriesName}=${resolved}`).toMatch(/=(#|rgb)/);
+    }
+  });
+
+  it('resolves the residual colour to a real value in both themes', () => {
+    for (const mode of ['dark', 'light'] as const) {
+      const resolved = createTheme({ colors: { mode } }).visualization.getColorByName(RESIDUAL_SERIES_COLOR);
+      expect(resolved).toMatch(/^(#|rgb)/);
     }
   });
 });

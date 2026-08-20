@@ -53,14 +53,14 @@ const PROVIDER_FAMILY_COLORS_BY_KEY: Record<string, string> = {
   gpt: 'green',
   glm: 'blue',
   review: 'yellow',
-  [OTHER_FAMILY.key]: 'text-disabled',
+  [OTHER_FAMILY.key]: 'gray',
 };
 
 /**
  * Fallback for a family added to `MODEL_FAMILIES` without a colour named here.
  * Better a readable neutral than an undefined lookup.
  */
-const UNASSIGNED_FAMILY_COLOR = 'text-secondary';
+const UNASSIGNED_FAMILY_COLOR = 'darkgray';
 
 /** Series names carrying an established meaning, and the colour each must keep. */
 export const SEMANTIC_SERIES_COLORS: Record<string, string> = {
@@ -84,8 +84,19 @@ export const SEMANTIC_SERIES_COLORS: Record<string, string> = {
   removed: 'red',
 };
 
-/** Colour the residual bucket always renders in — deliberately recessive. */
-export const RESIDUAL_SERIES_COLOR = 'text-disabled';
+/**
+ * Colour the residual bucket always renders in — deliberately recessive.
+ *
+ * `gray` resolves to #808080 in both themes, so it stays legible against a
+ * light and a dark panel background while reading as muted next to the
+ * saturated palette hues.
+ *
+ * It must be a name Grafana can actually resolve. Theme text tokens such as
+ * `text-disabled` look like valid names and are not: `getColorByName` returns
+ * an unknown name unchanged, and the panel then throws
+ * "Unsupported 'text-disabled' color" when it computes a fill alpha.
+ */
+export const RESIDUAL_SERIES_COLOR = 'gray';
 
 /**
  * Semantic colour for `name`, or undefined when it should fall through to the
