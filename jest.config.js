@@ -25,5 +25,7 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
   // @grafana/data pulls in ESM-only transitive deps (marked, and its own
   // uuid/ol chain); they must be transformed rather than ignored.
-  transformIgnorePatterns: ['node_modules/(?!(@grafana|marked|uuid|@braintree|d3|d3-.*|internmap|delaunator|robust-predicates|ol|rbush|quickselect|earcut|pbf|geotiff|color-.*|nanoid)/)'],
+  transformIgnorePatterns: [
+    'node_modules/(?!(@grafana|marked|uuid|@braintree|d3|d3-.*|internmap|delaunator|robust-predicates|ol|rbush|quickselect|earcut|pbf|geotiff|color-.*|nanoid|react-calendar|@wojtekmaj|get-user-locale|memoize|mimic-function|react-select|@floating-ui|rc-slider|react-inlinesvg|react-use|@react-aria|@react-stately|@react-types|@leeoniya|uplot|ansicolor|react-loading-skeleton|react-window|react-router-dom|react-router|@remix-run|monaco-editor|@monaco-editor|i18next|react-i18next|@formatjs|intl-messageformat|@floating-ui/.*)/)',
+  ],
 };

@@ -42,3 +42,5 @@ provisioning/dashboards/*.json
 
 # Claude
 .claude/
+# Playwright MCP scratch output (page snapshots, screenshots)
+/.playwright-mcp/

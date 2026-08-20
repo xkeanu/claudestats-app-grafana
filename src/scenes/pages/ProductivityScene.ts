@@ -5,23 +5,14 @@ import {
   SceneQueryRunner,
   SceneTimeRange,
   SceneVariableSet,
-  PanelBuilders,
   VariableValueSelectors,
   SceneControlsSpacer,
   SceneTimePicker,
   SceneRefreshPicker,
 } from '@grafana/scenes';
-import {
-  BigValueGraphMode,
-  LegendDisplayMode,
-  LineInterpolation,
-  StackingMode,
-  GraphDrawStyle,
-  BarGaugeDisplayMode,
-  BarGaugeValueMode,
-  VizOrientation,
-} from '@grafana/schema';
+import { BigValueGraphMode, LineInterpolation, StackingMode, GraphDrawStyle } from '@grafana/schema';
 import { QUERIES } from '../queries';
+import { barPanel, piePanel, statPanel, timeseriesPanel } from '../viz/panels';
 import { PANEL_HEIGHTS } from '../../constants';
 
 export function getProductivityScene(
@@ -142,40 +133,44 @@ export function getProductivityScene(
           height: PANEL_HEIGHTS.STAT,
           children: [
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Lines of Code')
-                .setUnit('short')
-                .setData(totalLinesOfCodeQuery)
+              body: statPanel({
+                title: 'Lines of Code',
+                quantity: 'count',
+                data: totalLinesOfCodeQuery,
+                color: { fixedColor: 'blue', mode: 'fixed' },
+              })
                 .setOption('graphMode', BigValueGraphMode.Area)
-                .setColor({ fixedColor: 'blue', mode: 'fixed' })
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Commits')
-                .setUnit('short')
-                .setData(totalCommitsQuery)
+              body: statPanel({
+                title: 'Commits',
+                quantity: 'count',
+                data: totalCommitsQuery,
+                color: { fixedColor: 'green', mode: 'fixed' },
+              })
                 .setOption('graphMode', BigValueGraphMode.Area)
-                .setColor({ fixedColor: 'green', mode: 'fixed' })
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Pull Requests')
-                .setDescription('Only counts PRs created by Claude Code itself (gh pr create, glab mr create). Manual PRs are not tracked.')
-                .setUnit('short')
-                .setData(totalPullRequestsQuery)
+              body: statPanel({
+                title: 'Pull Requests',
+                description: 'Only counts PRs created by Claude Code itself (gh pr create, glab mr create). Manual PRs are not tracked.',
+                quantity: 'count',
+                data: totalPullRequestsQuery,
+                color: { fixedColor: 'purple', mode: 'fixed' },
+              })
                 .setOption('graphMode', BigValueGraphMode.Area)
-                .setColor({ fixedColor: 'purple', mode: 'fixed' })
                 .build(),
             }),
             new SceneFlexItem({
-              body: PanelBuilders.stat()
-                .setTitle('Active Time')
-                .setUnit('s')
-                .setData(totalActiveTimeQuery)
+              body: statPanel({
+                title: 'Active Time',
+                quantity: 'durationSeconds',
+                data: totalActiveTimeQuery,
+                color: { fixedColor: 'orange', mode: 'fixed' },
+              })
                 .setOption('graphMode', BigValueGraphMode.Area)
-                .setColor({ fixedColor: 'orange', mode: 'fixed' })
                 .build(),
             }),
           ],
@@ -187,23 +182,23 @@ export function getProductivityScene(
           children: [
             new SceneFlexItem({
               width: '35%',
-              body: PanelBuilders.piechart()
-                .setTitle('Lines Added vs Removed')
-                .setUnit('short')
-                .setData(linesOfCodeByTypeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.Table, placement: 'right', values: ['value', 'percent'] as never })
-                .setOption('pieType', 'donut' as never)
-                .build(),
+              // Stays a pie: LOC `type` is added | removed, and both names
+              // take their semantic colour from the palette module.
+              body: piePanel({
+                title: 'Lines Added vs Removed',
+                quantity: 'count',
+                data: linesOfCodeByTypeQuery,
+              }).build(),
             }),
             new SceneFlexItem({
               width: '65%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Lines of Code Over Time')
-                .setUnit('short')
-                .setData(linesOfCodeOverTimeQuery)
-                .setOption('legend', { displayMode: LegendDisplayMode.List, placement: 'bottom' })
+              // Not clustered: grouped by the bounded LOC `type`.
+              body: timeseriesPanel({
+                title: 'Lines of Code Over Time',
+                quantity: 'count',
+                data: linesOfCodeOverTimeQuery,
+              })
                 .setCustomFieldConfig('stacking', { mode: StackingMode.Normal })
-                .setCustomFieldConfig('fillOpacity', 30)
                 .setCustomFieldConfig('lineInterpolation', LineInterpolation.Smooth)
                 .build(),
             }),
@@ -216,22 +211,20 @@ export function getProductivityScene(
           children: [
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Commits Over Time')
-                .setUnit('short')
-                .setData(commitsOverTimeQuery)
-                .setCustomFieldConfig('fillOpacity', 30)
+              // Not clustered: a single aggregate series.
+              body: timeseriesPanel({ title: 'Commits Over Time', quantity: 'count', data: commitsOverTimeQuery })
                 .setCustomFieldConfig('drawStyle', GraphDrawStyle.Bars)
                 .build(),
             }),
             new SceneFlexItem({
               width: '50%',
-              body: PanelBuilders.timeseries()
-                .setTitle('Pull Requests Over Time')
-                .setDescription('Only counts PRs created by Claude Code itself (gh pr create, glab mr create). Manual PRs are not tracked.')
-                .setUnit('short')
-                .setData(pullRequestsOverTimeQuery)
-                .setCustomFieldConfig('fillOpacity', 30)
+              // Not clustered: a single aggregate series.
+              body: timeseriesPanel({
+                title: 'Pull Requests Over Time',
+                description: 'Only counts PRs created by Claude Code itself (gh pr create, glab mr create). Manual PRs are not tracked.',
+                quantity: 'count',
+                data: pullRequestsOverTimeQuery,
+              })
                 .setCustomFieldConfig('drawStyle', GraphDrawStyle.Bars)
                 .build(),
             }),
@@ -243,18 +236,13 @@ export function getProductivityScene(
           height: PANEL_HEIGHTS.LARGE,
           children: [
             new SceneFlexItem({
-              body: PanelBuilders.bargauge()
-                .setTitle('Active Time by Device')
-                .setUnit('s')
-                .setData(activeTimeByDeviceQuery)
-                .setOption('orientation', VizOrientation.Horizontal)
-                .setOption('displayMode', BarGaugeDisplayMode.Gradient)
-                .setOption('valueMode', BarGaugeValueMode.Text)
-                .setOption('showUnfilled', true)
-                .setOption('minVizWidth', 200)
-                .setOption('minVizHeight', 50)
-                .setDisplayName('${__series.name}')
-                .build(),
+              // Ranked comparison over an unbounded dimension: clustered.
+              body: barPanel({
+                title: 'Active Time by Device',
+                quantity: 'durationSeconds',
+                data: activeTimeByDeviceQuery,
+                cluster: { mode: 'additive' },
+              }).build(),
             }),
           ],
         }),
