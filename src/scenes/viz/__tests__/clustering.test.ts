@@ -139,7 +139,49 @@ describe('clusterFrames — additive mode', () => {
     expect(seriesNameOf(out[8])).toBe(residualSeriesName(1));
   });
 
-  it('aligns frames of differing length by time index when summing the residual', () => {
+  it('sums the residual by timestamp, not by array index, when a series starts late', () => {
+    // `late` only starts reporting at t=2000 — exactly what Prometheus returns
+    // when a new version, device or language first appears mid-window. Its
+    // frame is NOT padded onto a shared grid (AGENTS.md), so adding nth sample
+    // to nth sample would credit its t=2000 value to t=0 and drop t=3000
+    // entirely.
+    const input = [
+      frame('big-a', [50, 50, 50]),
+      frame('big-b', [40, 40, 40]),
+      frame('early', [1, 1, 1]),
+      frame('late', [7, 7], [2000, 3000]),
+    ];
+    const out = clusterFrames(input, { limit: 2, mode: 'additive' });
+    const residual = out[2];
+
+    expect(residual.fields[0].values).toEqual([0, 1000, 2000, 3000]);
+    expect(residual.fields[1].values).toEqual([1, 1, 8, 7]);
+  });
+
+  it('preserves the total at each timestamp when series cover different windows (REQ-003)', () => {
+    const input = [
+      frame('big-a', [50, 50, 50]),
+      frame('big-b', [40, 40, 40]),
+      frame('early', [1, 1, 1]),
+      frame('late', [7, 7], [2000, 3000]),
+    ];
+    const out = clusterFrames(input, { limit: 2, mode: 'additive' });
+
+    // Sum every output series at a given TIMESTAMP, then compare with the same
+    // sum over the inputs. Index-wise comparison would hide the shift.
+    const sumAt = (frames: DataFrame[], time: number) =>
+      frames.reduce((total, f) => {
+        const index = f.fields[0].values.indexOf(time);
+        const value = index === -1 ? null : f.fields[1]?.values[index];
+        return total + (typeof value === 'number' ? value : 0);
+      }, 0);
+
+    for (const time of [0, 1000, 2000, 3000]) {
+      expect(sumAt(out, time)).toBe(sumAt(input, time));
+    }
+  });
+
+  it('lets a series that stopped reporting early contribute nothing past its end', () => {
     const input = [
       ...descendingFrames(2, 4),
       frame('short', [1, 1]),

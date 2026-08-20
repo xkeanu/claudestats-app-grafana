@@ -81,40 +81,53 @@ function rangeTotal(frame: DataFrame): number {
 }
 
 /**
- * Sum the dropped frames into one residual frame, aligned by time index.
+ * Sum the dropped frames into one residual frame, keyed by TIMESTAMP.
  *
- * Frames may differ in length when a series started or stopped reporting mid
- * range, so the residual spans the longest dropped frame and each shorter one
- * simply contributes nothing past its end. An index where no dropped frame has
- * a numeric value stays null rather than being reported as a real zero.
+ * Summing the nth sample of each frame would be wrong. The Prometheus
+ * datasource returns one frame per series with its own time axis and does not
+ * pad them onto a shared grid, so a series that first appears mid-window — a
+ * new version, device or language, which is precisely the long tail being
+ * clustered — starts at index 0 with a much later timestamp. Adding index to
+ * index credits that sample to the start of the range and drops the samples
+ * past the longest frame's length, breaking REQ-003 at every step.
+ *
+ * The residual therefore spans the union of the dropped frames' timestamps.
+ * A timestamp seen only as a null or non-numeric sample stays null rather than
+ * being reported as a real zero.
  */
 function buildResidualFrame(dropped: DataFrame[]): DataFrame {
-  const longest = dropped.reduce((widest, frame) => {
-    const values = numericFieldOf(frame)?.values;
-    return (values?.length ?? 0) > widest ? (values?.length ?? 0) : widest;
-  }, 0);
+  const byTimestamp = new Map<number, number | null>();
 
-  const sums: Array<number | null> = new Array(longest).fill(null);
   for (const frame of dropped) {
+    const times = frame.fields.find((field) => field.type === FieldType.time)?.values;
     const values = numericFieldOf(frame)?.values;
-    if (!values) {
+    if (!times || !values) {
       continue;
     }
-    for (let index = 0; index < values.length; index++) {
+
+    const samples = Math.min(times.length, values.length);
+    for (let index = 0; index < samples; index++) {
+      const time = times[index];
+      if (typeof time !== 'number') {
+        continue;
+      }
       const value = values[index];
       if (typeof value === 'number' && Number.isFinite(value)) {
-        sums[index] = (sums[index] ?? 0) + value;
+        byTimestamp.set(time, (byTimestamp.get(time) ?? 0) + value);
+      } else if (!byTimestamp.has(time)) {
+        byTimestamp.set(time, null);
       }
     }
   }
 
+  const timeValues = [...byTimestamp.keys()].sort((a, b) => a - b);
+  const sums = timeValues.map((time) => byTimestamp.get(time) ?? null);
   const name = residualSeriesName(dropped.length);
-  const timeValues = residualTimeValues(dropped, longest);
 
   return {
     name,
     refId: name,
-    length: longest,
+    length: timeValues.length,
     fields: [
       { name: 'Time', type: FieldType.time, config: {}, values: timeValues },
       {
@@ -125,17 +138,6 @@ function buildResidualFrame(dropped: DataFrame[]): DataFrame {
       },
     ],
   };
-}
-
-/** Time axis for the residual: that of the dropped frame with the most points. */
-function residualTimeValues(dropped: DataFrame[], longest: number): number[] {
-  for (const frame of dropped) {
-    const timeField = frame.fields.find((field) => field.type === FieldType.time);
-    if (timeField && timeField.values.length === longest) {
-      return timeField.values;
-    }
-  }
-  return Array.from({ length: longest }, (_, index) => index);
 }
 
 /**
